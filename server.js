@@ -2,7 +2,6 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { fetchMtcDriver } = require('./mtc_service');
 const db = require('./database');
 
 // Carga variables desde .env sin dependencias externas
@@ -47,7 +46,26 @@ function integrationCors(req){
   return{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'};
 }
 function normalizeDocumentType(value){const type=clean(value,30).toUpperCase();if(type==='DNI'||type.includes('NACIONAL'))return 'DNI';if(type==='CE'||type.includes('EXTRANJER'))return 'CE';if(type.includes('PASAPORTE'))return 'PAS';if(type.includes('PTP')||type.includes('CPP'))return 'PTP';if(type.includes('SOLICITANTE'))return 'CARNE_SOLICITANTE';if(type.includes('TARJETA'))return 'TARJETA_IDENTIDAD';return type||'DNI'}
-function normalizeRecord(input){return{documentType:normalizeDocumentType(input.documentType),documentNumber:clean(input.documentNumber,15).toUpperCase(),lastNames:clean(input.lastNames),firstNames:clean(input.firstNames),licenseClass:clean(input.licenseClass,30),licenseNumber:clean(input.licenseNumber,30),licenseType:clean(input.licenseType,30)||'FISICA',status:clean(input.status,30)||'Vigente',issuedAt:clean(input.issuedAt,20),expiresAt:clean(input.expiresAt,20),restrictions:clean(input.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(input.issuer,180),points:Number.isFinite(Number(input.points))?Number(input.points):0,source:clean(input.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
+function cleanDate(value){return clean(value,30).split(/[ T]/)[0]}
+function incomingMtcParts(input){
+  const items=Array.isArray(input)?input:[input];
+  const payloads=items.map(item=>item?.data??item?.body??item?.response??item).filter(value=>value&&typeof value==='object');
+  const general=[...payloads].reverse().find(value=>value?.Data?.Administrados?.length)||payloads.find(value=>value?.Administrados?.length);
+  const score=[...payloads].reverse().find(value=>value?.Data?.Administrado)||payloads.find(value=>value?.Administrado);
+  return{general:general?.Data??general,score:score?.Data?.Administrado??score?.Administrado??{}};
+}
+function adaptIncomingRecord(input){
+  const {general,score}=incomingMtcParts(input);
+  const person=general?.Administrados?.[0]||{};
+  const license=general?.LicenciaA||general?.LicenciaB||{};
+  if(Object.keys(person).length||Object.keys(license).length||Object.keys(score).length){
+    const restrictions=[license.Restriccion1||person.Restricciones1,license.Restriccion2||person.Restricciones2].filter(Boolean).join(' - ');
+    return{documentType:person.NomTipoDoc||score.var_tipodocumento,documentNumber:person.NumDocumento||score.var_numdocumento,lastNames:[person.ApellidoPaterno,person.ApellidoMaterno].filter(Boolean).join(' '),firstNames:person.Nombre,licenseClass:license.Categoria||person.Categoria||score.clase_categoria,licenseNumber:license.NroLicencia||person.NumLicencia||score.num_licencia,licenseType:Number(license.LicenciaElectronica)===1?'ELECTRONICA':'FISICA',status:license.Estado||person.EstadoLicencia||score.estado,issuedAt:license.FechaExpedicion||person.FechaExpedicion||score.fechaexpedicion,expiresAt:license.FechaRevalidacion||person.FechaRevalidacion||score.fecharevalidacion,restrictions,issuer:license.CentroEmision||'MTC',points:score.PtsAcumulados};
+  }
+  const value=Array.isArray(input)?(input[0]||{}):(input?.record??input?.data??input??{});
+  return{...value,documentType:value.documentType??value.tipoDocumento??value.tipo_documento,documentNumber:value.documentNumber??value.numeroDocumento??value.numero_documento??value.dni,lastNames:value.lastNames??value.apellidos,firstNames:value.firstNames??value.nombres,licenseClass:value.licenseClass??value.claseCategoria??value.categoria,licenseNumber:value.licenseNumber??value.numeroLicencia??value.nroLicencia,licenseType:value.licenseType??value.tipoLicencia,status:value.status??value.estado,issuedAt:value.issuedAt??value.fechaExpedicion,expiresAt:value.expiresAt??value.fechaRevalidacion??value.fechaVencimiento,restrictions:value.restrictions??value.restricciones,issuer:value.issuer??value.centroEmision,points:value.points??value.puntos};
+}
+function normalizeRecord(input){const value=adaptIncomingRecord(input);return{documentType:normalizeDocumentType(value.documentType),documentNumber:clean(value.documentNumber,15).toUpperCase(),lastNames:clean(value.lastNames),firstNames:clean(value.firstNames),licenseClass:clean(value.licenseClass,30),licenseNumber:clean(value.licenseNumber,30),licenseType:clean(value.licenseType,30)||'FISICA',status:clean(value.status,30)||'Vigente',issuedAt:cleanDate(value.issuedAt),expiresAt:cleanDate(value.expiresAt),restrictions:clean(value.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(value.issuer,180),points:Number.isFinite(Number(value.points))?Math.trunc(Number(value.points)):0,source:clean(input?.source||value.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
 function validateRecord(record){const error=validateDocument(record.documentType,record.documentNumber);if(error)return error;if(!record.lastNames||!record.firstNames)return 'Ingrese apellidos y nombres.';if(!record.licenseClass||!record.licenseNumber)return 'Ingrese clase y número de licencia.';return null}
 function makeCaptcha(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<6;i+=1)code+=alphabet[crypto.randomInt(alphabet.length)];const expires=Date.now()+300000;const payload=Buffer.from(JSON.stringify({code,expires})).toString('base64url');const signature=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');const token=`${payload}.${signature}`;const chars=[...code].map((char,index)=>`<text x="${31+index*27}" y="29">${char}</text>`).join('');const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="210" height="38"><rect width="210" height="38" fill="#fffaf0"/><g font-family="Arial" font-size="27" fill="#171717">${chars}</g></svg>`;return{token,image:`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`}}
 function verifyCaptcha(token,answer){if(!token||!answer||!token.includes('.'))return false;try{const[payload,signature]=token.split('.');const expected=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');if(signature.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected)))return false;const data=JSON.parse(Buffer.from(payload,'base64url').toString('utf8'));return data.expires>Date.now()&&data.code===String(answer).trim().toUpperCase()}catch{return false}}
@@ -69,7 +87,8 @@ const server=http.createServer(async(req,res)=>{
       const authorization=String(req.headers.authorization||'');
       const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
       if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'},integrationCors(req));
-      const record=normalizeRecord({...await readBody(req),source:'MTC_EXTENSION'});
+      const record=normalizeRecord(await readBody(req));
+      record.source='MTC_EXTENSION';
       const error=validateRecord(record);
       if(error)return json(res,400,{ok:false,message:error},integrationCors(req));
       const saved=await db.upsertRecord(record);
@@ -91,34 +110,8 @@ const server=http.createServer(async(req,res)=>{
       const validation=validateDocument(type,number);
       if(validation)return json(res,400,{ok:false,message:validation});
       searchLog('request_received',{documentType:type,document:masked(number)});
-      let record=await db.findByDocumentNumber(number);
-      if(record?.source==='MTC_EXTENSION'){
-        searchLog('verified_extension_hit',{document:masked(number)});
-      }else{
-        record=null;
-      }
-      let mtcFailure;
-      if(!record)try{
-        const mtc=await fetchMtcDriver(type,number);
-        searchLog('mtc_response',{ok:mtc.ok===true,error:mtc.error||null,document:masked(number)});
-        if(mtc.ok&&mtc.record){
-          record=normalizeRecord(mtc.record);
-          record=await db.upsertRecord(record);
-        }else{
-          mtcFailure=mtc;
-        }
-      }catch(e){
-        mtcFailure={error:'error',message:'No se pudo completar la consulta externa.'};
-        searchLog('unexpected_error',{name:e.name,message:e.message,document:masked(number)});
-      }
-      if(!record){
-        searchLog('database_fallback_started',{document:masked(number)});
-        record=await db.findByDocumentNumber(number);
-        searchLog(record?'database_fallback_hit':'database_fallback_miss',{document:masked(number)});
-      }
-      if(!record&&mtcFailure?.error==='rate_limited')return json(res,429,{ok:false,message:mtcFailure.message});
-      if(!record&&mtcFailure?.error==='blocked')return json(res,503,{ok:false,error:'extension_required',message:'La consulta debe completarse mediante la extensión del navegador.'});
-      if(!record&&mtcFailure?.error==='error')return json(res,503,{ok:false,message:mtcFailure.message});
+      const record=await db.findByDocumentNumber(number);
+      searchLog(record?'database_hit':'database_miss',{document:masked(number)});
       if(!record)return json(res,404,{ok:false,message:'¡No se encontró información de persona natural!!'});
       const id=crypto.randomUUID();
       queryResults.set(id,{record,expires:Date.now()+5*60*1000});
@@ -134,4 +127,4 @@ const server=http.createServer(async(req,res)=>{
 
 server.requestTimeout=45000;server.headersTimeout=40000;server.keepAliveTimeout=10000;
 if(require.main===module)server.listen(PORT,HOST,()=>console.log(`Aplicación disponible en http://${HOST}:${PORT}`));
-module.exports={server,validateDocument,verifyCaptcha,makeCaptcha,normalizeRecord,validateRecord};
+module.exports={server,validateDocument,verifyCaptcha,makeCaptcha,adaptIncomingRecord,normalizeRecord,validateRecord};

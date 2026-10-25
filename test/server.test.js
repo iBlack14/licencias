@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateDocument, verifyCaptcha, makeCaptcha, server } = require('../server');
+const { validateDocument, verifyCaptcha, makeCaptcha, normalizeRecord, validateRecord, server } = require('../server');
 
 test('valida el DNI', () => {
   assert.equal(validateDocument('DNI', ''), 'Debe ingresar su número de Documento.');
@@ -19,6 +19,30 @@ test('firma y valida captcha local', () => {
   const { code } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
   assert.equal(verifyCaptcha(token, code), true);
   assert.equal(verifyCaptcha(token, 'ERROR'), false);
+});
+
+test('acepta y normaliza el JSON original del MTC', () => {
+  const record = normalizeRecord({
+    IsSuccess: true,
+    Data: {
+      Administrados: [{ NomTipoDoc: 'DNI', NumDocumento: '12345678', ApellidoPaterno: 'PEREZ', ApellidoMaterno: 'DIAZ', Nombre: 'ANA' }],
+      LicenciaA: { Categoria: 'A II-B', NroLicencia: 'Q12345678', Estado: 'VIGENTE', FechaExpedicion: '01/02/2024 00:00:00', FechaRevalidacion: '01/02/2029 00:00:00', Restriccion1: 'LENTES', CentroEmision: 'MTC LIMA' }
+    }
+  });
+  assert.equal(validateRecord(record), null);
+  assert.equal(record.lastNames, 'PEREZ DIAZ');
+  assert.equal(record.expiresAt, '01/02/2029');
+  assert.equal(record.restrictions, 'LENTES');
+});
+
+test('combina las capturas general y de puntos del MTC', () => {
+  const record = normalizeRecord([
+    { data: { IsSuccess: true, Data: { Administrados: [{ NumDocumento: '12345678', ApellidoPaterno: 'PEREZ', Nombre: 'ANA' }], LicenciaB: { Categoria: 'B II-C', NroLicencia: 'B12345678' } } } },
+    { data: { IsSuccess: true, Data: { Administrado: { var_numdocumento: '12345678', PtsAcumulados: '12' } } } }
+  ]);
+  assert.equal(validateRecord(record), null);
+  assert.equal(record.licenseClass, 'B II-C');
+  assert.equal(record.points, 12);
 });
 
 test('acepta preflight CORS desde una extensión Chrome', async () => {

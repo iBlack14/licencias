@@ -16,6 +16,18 @@ function show(message, type = '') {
   status.className = type;
 }
 
+async function extractFromMtcTab(tab) {
+  try {
+    return await chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_MTC_RECORD' });
+  } catch (error) {
+    const receiverMissing = /Receiving end does not exist|Could not establish connection/i.test(error.message || '');
+    if (!receiverMissing) throw error;
+    show('Reconectando la extensión con la pestaña del MTC…');
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    return chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_MTC_RECORD' });
+  }
+}
+
 async function loadSettings() {
   const saved = await chrome.storage.local.get(['endpoint', 'token', 'savedAt']);
   endpointInput.value = saved.endpoint || '';
@@ -65,7 +77,7 @@ importButton.addEventListener('click', async () => {
     await ensureHostPermission(settings.endpoint);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url?.startsWith('https://licencias.mtc.gob.pe/')) throw new Error('Abre primero el resultado en licencias.mtc.gob.pe.');
-    const extracted = await chrome.tabs.sendMessage(tab.id, { type: 'EXTRACT_MTC_RECORD' });
+    const extracted = await extractFromMtcTab(tab);
     if (!extracted?.ok) throw new Error(extracted?.message || 'No se pudo leer el resultado.');
     const response = await fetch(`${settings.endpoint}/api/integrations/mtc-record`, {
       method: 'POST',

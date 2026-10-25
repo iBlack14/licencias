@@ -40,5 +40,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete' || !tab.url) return;
   if (!tab.url.startsWith('https://soat-licencia.stkkft.easypanel.host/') &&
       !tab.url.startsWith('https://licencias.mtc.gob.pe/')) return;
-  chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }).catch(() => {});
+  (async () => {
+    if (tab.url.startsWith('https://licencias.mtc.gob.pe/')) {
+      await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', files: ['network-monitor.js'] });
+    }
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+  })().catch(() => {});
 });
