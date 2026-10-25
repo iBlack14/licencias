@@ -1,9 +1,20 @@
+function openMtcLookup(message, sendResponse) {
+  chrome.storage.local.set({ pendingLookup: message.lookup })
+    .then(() => chrome.tabs.create({ url: 'https://licencias.mtc.gob.pe/#/index' }))
+    .then(() => sendResponse({ ok: true }))
+    .catch(error => sendResponse({ ok: false, message: error.message }));
+}
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (sender.url?.startsWith('https://soat-licencia.stkkft.easypanel.host/') && message?.type === 'OPEN_MTC_LOOKUP') {
+    openMtcLookup(message, sendResponse);
+    return true;
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'OPEN_MTC_LOOKUP') {
-    chrome.storage.local.set({ pendingLookup: message.lookup })
-      .then(() => chrome.tabs.create({ url: 'https://licencias.mtc.gob.pe/#/index' }))
-      .then(() => sendResponse({ ok: true }))
-      .catch(error => sendResponse({ ok: false, message: error.message }));
+    openMtcLookup(message, sendResponse);
     return true;
   }
 

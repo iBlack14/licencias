@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MTC → Licencias",
-    "version": "1.1.0",
+    "version": "1.1.1",
   "description": "Guarda en el sistema un resultado consultado manualmente en el portal del MTC.",
     "permissions": [
         "activeTab",
@@ -30,6 +30,11 @@
     },
     "background": {
         "service_worker": "background.js"
+    },
+    "externally_connectable": {
+        "matches": [
+            "https://soat-licencia.stkkft.easypanel.host/*"
+        ]
     },
   "host_permissions": [
     "https://soat-licencia.stkkft.easypanel.host/*"
