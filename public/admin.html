@@ -94,6 +94,14 @@
           <span class="material-icons">bar_chart</span>
           <span>Estadísticas</span>
         </button>
+        <button class="nav-item" data-section="exam-conocimiento" id="nav-exam-conocimiento">
+          <span class="material-icons">menu_book</span>
+          <span>Examen de conocimiento</span>
+        </button>
+        <button class="nav-item" data-section="exam-conduccion" id="nav-exam-conduccion">
+          <span class="material-icons">drive_eta</span>
+          <span>Examen de conducción</span>
+        </button>
       </nav>
       <div class="sidebar-footer">
         <div class="user-chip">
@@ -220,6 +228,102 @@
           <span class="material-icons">bar_chart</span>
           <p>Distribución por clase de licencia en el sistema</p>
           <div class="bar-chart" id="bar-chart"></div>
+        </div>
+      </section>
+
+      <!-- EXAMEN DE CONOCIMIENTO SECTION -->
+      <section id="section-exam-conocimiento" class="content-section">
+        <div class="exam-section-header">
+          <div class="exam-section-icon-wrap exam-icon-blue">
+            <span class="material-icons">menu_book</span>
+          </div>
+          <div>
+            <h2>Examen de Conocimiento</h2>
+            <p>Registro y gestión de exámenes teóricos de conocimiento vial</p>
+          </div>
+        </div>
+        <div class="exam-toolbar">
+          <div class="search-input-wrap">
+            <span class="material-icons">search</span>
+            <input id="ec-search" type="text" placeholder="Buscar por DNI o apellidos…" autocomplete="off">
+          </div>
+          <button class="btn-primary" id="ec-add-btn">
+            <span class="material-icons">add</span>
+            Nuevo Registro
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="ec-table">
+            <thead>
+              <tr>
+                <th>DNI / Doc.</th>
+                <th>Apellidos y Nombres</th>
+                <th>Fecha</th>
+                <th>Puntaje</th>
+                <th>Resultado</th>
+                <th>Observaciones</th>
+                <th class="col-actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="ec-tbody">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <span class="material-icons">menu_book</span>
+                    <p>No hay registros de exámenes de conocimiento aún.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EXAMEN DE CONDUCCIÓN SECTION -->
+      <section id="section-exam-conduccion" class="content-section">
+        <div class="exam-section-header">
+          <div class="exam-section-icon-wrap exam-icon-green">
+            <span class="material-icons">drive_eta</span>
+          </div>
+          <div>
+            <h2>Examen de Conducción</h2>
+            <p>Registro y gestión de exámenes prácticos de conducción</p>
+          </div>
+        </div>
+        <div class="exam-toolbar">
+          <div class="search-input-wrap">
+            <span class="material-icons">search</span>
+            <input id="ecd-search" type="text" placeholder="Buscar por DNI o apellidos…" autocomplete="off">
+          </div>
+          <button class="btn-primary" id="ecd-add-btn">
+            <span class="material-icons">add</span>
+            Nuevo Registro
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="ecd-table">
+            <thead>
+              <tr>
+                <th>DNI / Doc.</th>
+                <th>Apellidos y Nombres</th>
+                <th>Fecha</th>
+                <th>Circuito</th>
+                <th>Puntaje</th>
+                <th>Resultado</th>
+                <th class="col-actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="ecd-tbody">
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <span class="material-icons">drive_eta</span>
+                    <p>No hay registros de exámenes de conducción aún.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

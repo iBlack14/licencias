@@ -103,6 +103,13 @@ document.addEventListener('click', e => {
     sidebar.classList.remove('open');
 });
 
+const sectionTitles = {
+  'records': 'Gestión de Licencias',
+  'stats': 'Estadísticas',
+  'exam-conocimiento': 'Examen de Conocimiento',
+  'exam-conduccion': 'Examen de Conducción'
+};
+
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -110,7 +117,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     const section = btn.dataset.section;
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     $(`section-${section}`).classList.add('active');
-    $('page-title').textContent = section === 'records' ? 'Gestión de Licencias' : 'Estadísticas';
+    $('page-title').textContent = sectionTitles[section] || section;
     if (section === 'stats') renderStats();
     sidebar.classList.remove('open');
   });
