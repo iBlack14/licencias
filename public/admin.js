@@ -119,6 +119,8 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     $(`section-${section}`).classList.add('active');
     $('page-title').textContent = sectionTitles[section] || section;
     if (section === 'stats') renderStats();
+    if (section === 'exam-conocimiento') renderExamConocimiento();
+    if (section === 'exam-conduccion') renderExamConduccion();
     sidebar.classList.remove('open');
   });
 });
@@ -152,6 +154,8 @@ async function loadRecords() {
   }
   allRecords = data.records || [];
   renderTable();
+  renderExamConocimiento();
+  renderExamConduccion();
 }
 
 /* ——————————————————————————————
@@ -252,10 +256,21 @@ const formError   = $('form-error');
 
 function openAddModal() {
   editingDoc = null;
-  $('modal-title').textContent = 'Nuevo Registro de Licencia';
+  $('modal-title').textContent = 'Nuevo Registro de Licencia y Evaluaciones';
   recordForm.reset();
   $('f-restrictions').value = 'SIN RESTRICCIONES';
   $('f-points').value = '0';
+  $('f-tramite').value = 'REVALIDACIÓN';
+  $('f-evalCat').value = 'A I';
+  $('f-medCentro').value = 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.';
+  $('f-medFecha').value = '16/10/2026';
+  $('f-medVence').value = '16/04/2027';
+  $('f-conCentro').value = 'TOURING Y AUTOMOVIL CLUB DEL PERU';
+  $('f-conFecha').value = '16/10/2026';
+  $('f-conVence').value = '16/04/2027';
+  $('f-habCentro').value = 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
+  $('f-habFecha').value = '16/10/2026';
+  $('f-habVence').value = '16/04/2027';
   formError.hidden = true;
   resetModalPosition(recordModal);
   recordModal.hidden = false;
@@ -266,15 +281,15 @@ function openEditModal(docNumber) {
   const rec = allRecords.find(r => r.documentNumber === docNumber);
   if (!rec) return;
   editingDoc = docNumber;
-  $('modal-title').textContent = 'Editar Registro de Licencia';
+  $('modal-title').textContent = 'Editar Registro de Licencia y Evaluaciones';
   formError.hidden = true;
 
-  // Populate
+  // Populate base
   $('f-docType').value      = rec.documentType  || 'DNI';
   $('f-docNum').value       = rec.documentNumber || '';
   $('f-lastNames').value    = rec.lastNames      || '';
   $('f-firstNames').value   = rec.firstNames     || '';
-  $('f-licenseClass').value = rec.licenseClass   || 'B II-C';
+  $('f-licenseClass').value = rec.licenseClass   || 'A-I';
   $('f-licenseNum').value   = rec.licenseNumber  || '';
   $('f-licenseType').value  = rec.licenseType    || 'FISICA';
   $('f-status').value       = rec.status         || 'Vigente';
@@ -284,9 +299,23 @@ function openEditModal(docNumber) {
   $('f-points').value       = rec.points ?? 0;
   $('f-restrictions').value = rec.restrictions   || 'SIN RESTRICCIONES';
 
+  // Populate evaluaciones
+  const ev = rec.evaluations || {};
+  $('f-tramite').value    = ev.tramite || 'REVALIDACIÓN';
+  $('f-evalCat').value    = ev.evalCategoria || rec.licenseClass || 'A I';
+  $('f-medCentro').value  = ev.medCentro || rec.issuer || 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.';
+  $('f-medFecha').value   = ev.medFecha || rec.issuedAt || '16/10/2026';
+  $('f-medVence').value   = ev.medVence || rec.expiresAt || '16/04/2027';
+  $('f-conCentro').value  = ev.conCentro || rec.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
+  $('f-conFecha').value   = ev.conFecha || rec.issuedAt || '16/10/2026';
+  $('f-conVence').value   = ev.conVence || rec.expiresAt || '16/04/2027';
+  $('f-habCentro').value  = ev.habCentro || rec.issuer || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
+  $('f-habFecha').value   = ev.habFecha || rec.issuedAt || '16/10/2026';
+  $('f-habVence').value   = ev.habVence || rec.expiresAt || '16/04/2027';
+
   resetModalPosition(recordModal);
   recordModal.hidden = false;
-  $('f-lastNames').focus();
+  $('f-firstNames').focus();
 }
 
 function closeRecordModal() { 
@@ -319,7 +348,19 @@ recordForm.addEventListener('submit', async e => {
     expiresAt:      $('f-expiresAt').value.trim(),
     issuer:         $('f-issuer').value.trim().toUpperCase(),
     points:         Number($('f-points').value) || 0,
-    restrictions:   $('f-restrictions').value.trim().toUpperCase() || 'SIN RESTRICCIONES'
+    restrictions:   $('f-restrictions').value.trim().toUpperCase() || 'SIN RESTRICCIONES',
+    // Evaluaciones
+    tramite:        $('f-tramite').value.trim().toUpperCase(),
+    evalCategoria:  $('f-evalCat').value.trim().toUpperCase() || $('f-licenseClass').value,
+    medCentro:      $('f-medCentro').value.trim().toUpperCase(),
+    medFecha:       $('f-medFecha').value.trim(),
+    medVence:       $('f-medVence').value.trim(),
+    conCentro:      $('f-conCentro').value.trim().toUpperCase(),
+    conFecha:       $('f-conFecha').value.trim(),
+    conVence:       $('f-conVence').value.trim(),
+    habCentro:      $('f-habCentro').value.trim().toUpperCase(),
+    habFecha:       $('f-habFecha').value.trim(),
+    habVence:       $('f-habVence').value.trim()
   };
 
   let result;
@@ -330,12 +371,12 @@ recordForm.addEventListener('submit', async e => {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '<span class="material-icons">save</span> Guardar registro';
+  btn.innerHTML = '<span class="material-icons">save</span> Guardar registro y evaluaciones';
 
   if (result.ok) {
     closeRecordModal();
     await loadRecords();
-    toast(editingDoc ? 'Registro actualizado correctamente' : 'Registro creado correctamente', 'success');
+    toast(editingDoc ? 'Registro y evaluaciones actualizados correctamente' : 'Registro y evaluaciones creados correctamente', 'success');
     if ($('section-stats').classList.contains('active')) renderStats();
   } else {
     formError.textContent = result.data.message || 'Error al guardar.';
@@ -410,6 +451,152 @@ function renderStats() {
     </div>
   `).join('') || '<p style="color:var(--text-muted);font-size:.85rem">Sin datos aún</p>';
 }
+
+/* ——————————————————————————————
+   EXAMEN DE CONOCIMIENTO
+   —————————————————————————————— */
+let ecSearchTerm = '';
+
+function resultBadge(status) {
+  // Vigente / Aprobado → verde, Suspendida → naranja, Revocada/Vencida → rojo
+  const map = {
+    'Vigente':    { cls: 'vigente',    label: 'APROBADO' },
+    'Suspendida': { cls: 'suspendida', label: 'SUSPENDIDO' },
+    'Revocada':   { cls: 'revocada',   label: 'REVOCADO' },
+    'Vencida':    { cls: 'revocada',   label: 'VENCIDO' }
+  };
+  const item = map[status] || { cls: 'suspendida', label: status || 'PENDIENTE' };
+  return `<span class="status-badge ${item.cls}"><span class="status-dot"></span>${item.label}</span>`;
+}
+
+function renderExamConocimiento() {
+  const tbody = $('ec-tbody');
+  const q = ecSearchTerm.toLowerCase();
+  const filtered = q
+    ? allRecords.filter(r =>
+        (r.documentNumber || '').toLowerCase().includes(q) ||
+        (r.lastNames || '').toLowerCase().includes(q) ||
+        (r.firstNames || '').toLowerCase().includes(q) ||
+        (r.evaluations?.conCentro || '').toLowerCase().includes(q)
+      )
+    : allRecords;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">menu_book</span><p>${q ? 'No hay coincidencias.' : 'No hay registros de exámenes de conocimiento aún.'}</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const ev = r.evaluations || {};
+    const centro = ev.conCentro || r.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
+    const fecha = ev.conFecha || r.issuedAt || '16/10/2026';
+    const vence = ev.conVence || r.expiresAt || '16/04/2027';
+    const tramite = ev.tramite || 'REVALIDACIÓN';
+    const cat = ev.evalCategoria || r.licenseClass || 'A I';
+
+    return `
+      <tr>
+        <td class="doc-chip">${r.documentType || 'DNI'} · ${r.documentNumber || ''}</td>
+        <td>
+          <strong>${r.lastNames || ''}</strong><br>
+          <span style="font-size:.83rem;color:var(--text-muted)">${r.firstNames || ''}</span>
+        </td>
+        <td style="font-size:.85rem">${centro}</td>
+        <td style="font-size:.83rem;text-align:center">${fecha}</td>
+        <td style="font-size:.83rem;text-align:center">${vence}</td>
+        <td style="text-align:center"><span class="doc-chip">${tramite}</span></td>
+        <td style="text-align:center"><strong>${cat}</strong></td>
+        <td style="text-align:center;white-space:nowrap">
+          <button class="action-btn edit" title="Editar evaluación" data-doc="${r.documentNumber}">
+            <span class="material-icons">edit</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.action-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditModal(btn.dataset.doc);
+    });
+  });
+}
+
+$('ec-search').addEventListener('input', e => {
+  ecSearchTerm = e.target.value.trim();
+  renderExamConocimiento();
+});
+
+$('ec-add-btn').addEventListener('click', () => {
+  openAddModal();
+});
+
+/* ——————————————————————————————
+   EXAMEN DE CONDUCCIÓN
+   —————————————————————————————— */
+let ecdSearchTerm = '';
+
+function renderExamConduccion() {
+  const tbody = $('ecd-tbody');
+  const q = ecdSearchTerm.toLowerCase();
+  const filtered = q
+    ? allRecords.filter(r =>
+        (r.documentNumber || '').toLowerCase().includes(q) ||
+        (r.lastNames || '').toLowerCase().includes(q) ||
+        (r.firstNames || '').toLowerCase().includes(q) ||
+        (r.evaluations?.habCentro || '').toLowerCase().includes(q)
+      )
+    : allRecords;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">drive_eta</span><p>${q ? 'No hay coincidencias.' : 'No hay registros de exámenes de conducción aún.'}</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const ev = r.evaluations || {};
+    const centro = ev.habCentro || r.issuer || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
+    const fecha = ev.habFecha || r.issuedAt || '16/10/2026';
+    const vence = ev.habVence || r.expiresAt || '16/04/2027';
+    const tramite = ev.tramite || 'REVALIDACIÓN';
+    const cat = ev.evalCategoria || r.licenseClass || 'A I';
+
+    return `
+      <tr>
+        <td class="doc-chip">${r.documentType || 'DNI'} · ${r.documentNumber || ''}</td>
+        <td>
+          <strong>${r.lastNames || ''}</strong><br>
+          <span style="font-size:.83rem;color:var(--text-muted)">${r.firstNames || ''}</span>
+        </td>
+        <td style="font-size:.85rem">${centro}</td>
+        <td style="font-size:.83rem;text-align:center">${fecha}</td>
+        <td style="font-size:.83rem;text-align:center">${vence}</td>
+        <td style="text-align:center"><span class="doc-chip">${tramite}</span></td>
+        <td style="text-align:center"><strong>${cat}</strong></td>
+        <td style="text-align:center;white-space:nowrap">
+          <button class="action-btn edit" title="Editar evaluación" data-doc="${r.documentNumber}">
+            <span class="material-icons">edit</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.action-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openEditModal(btn.dataset.doc);
+    });
+  });
+}
+
+$('ecd-search').addEventListener('input', e => {
+  ecdSearchTerm = e.target.value.trim();
+  renderExamConduccion();
+});
+
+$('ecd-add-btn').addEventListener('click', () => {
+  openAddModal();
+});
 
 /* ——————————————————————————————
    KEYBOARD SHORTCUTS

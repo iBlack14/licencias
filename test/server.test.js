@@ -84,3 +84,35 @@ test('expone el estado de integración con y sin slash final', async () => {
     else process.env.EXTENSION_API_TOKEN = previous;
   }
 });
+
+test('valida /api/consulta con captcha y formato de documento', async () => {
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const { port } = server.address();
+    const { token } = makeCaptcha();
+
+    // Captcha incorrecto
+    const badCaptcha = await fetch(`http://127.0.0.1:${port}/api/consulta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentType: 'DNI', documentNumber: '72218318', captchaAnswer: 'WRONG', captchaToken: token })
+    });
+    assert.equal(badCaptcha.status, 400);
+    const badCaptchaData = await badCaptcha.json();
+    assert.match(badCaptchaData.message, /verificación es incorrecto/);
+
+    // Documento inválido con captcha firmado
+    const [payload] = token.split('.');
+    const { code } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const badDoc = await fetch(`http://127.0.0.1:${port}/api/consulta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentType: 'DNI', documentNumber: '123', captchaAnswer: code, captchaToken: token })
+    });
+    assert.equal(badDoc.status, 400);
+    const badDocData = await badDoc.json();
+    assert.match(badDocData.message, /DNI debe contener 8 dígitos/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});

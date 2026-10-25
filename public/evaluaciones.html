@@ -8,15 +8,117 @@
 <body>
   <div class="page-shell">
     <header class="hero"><img src="/assets/images/cabecera_consulta_evaluaciones.svg" alt="Consulta de Examen Médico, Aptitud, COFIPRO y habilidades en la conducción"></header>
-    <main><section class="consultation" aria-labelledby="page-title"><h1 id="page-title">Selecciona tu documento de identidad:</h1>
-      <form id="consultation-form" novalidate>
-        <label class="sr-only" for="document-type">Tipo de documento</label><select id="document-type" name="documentType"><option value="DNI">DNI</option><option value="CE">CE</option><option value="PTP/CPP">PTP/CPP</option><option value="CARNE_SOLICITANTE">CARNÉ SOLICITANTE</option><option value="TARJETA_IDENTIDAD">TARJETA DE IDENTIDAD</option></select>
-        <label class="sr-only" for="document-number">Número de documento</label><input id="document-number" name="documentNumber" inputmode="numeric" autocomplete="off" placeholder="Ingrese el documento" maxlength="15">
-        <label class="sr-only" for="license-class">Clase de licencia</label><select id="license-class" name="licenseClass"><option value="A">Clase A</option><option value="B">Clase B</option></select>
-        <div class="captcha-block"><label class="sr-only" for="captcha-answer">Texto de verificación</label><input id="captcha-answer" name="captchaAnswer" autocomplete="off" placeholder="Ingrese el texto" maxlength="6"><img id="captcha-image" width="210" height="38" alt="Código captcha"><button type="button" id="refresh-captcha" class="link-button">Refrescar Captcha</button></div>
-        <a href="/" class="link-button home-link">Ir a la página principal</a><button type="submit" class="submit-button">CONSULTAR</button>
-      </form>
-    </section></main>
+    <main>
+      <section class="consultation" id="consultation-section" aria-labelledby="page-title">
+        <h1 id="page-title">Selecciona tu documento de identidad:</h1>
+        <form id="consultation-form" novalidate>
+          <label class="sr-only" for="document-type">Tipo de documento</label><select id="document-type" name="documentType"><option value="DNI">DNI</option><option value="CE">CE</option><option value="PTP/CPP">PTP/CPP</option><option value="CARNE_SOLICITANTE">CARNÉ SOLICITANTE</option><option value="TARJETA_IDENTIDAD">TARJETA DE IDENTIDAD</option></select>
+          <label class="sr-only" for="document-number">Número de documento</label><input id="document-number" name="documentNumber" inputmode="numeric" autocomplete="off" placeholder="Ingrese el documento" maxlength="15">
+          <label class="sr-only" for="license-class">Clase de licencia</label><select id="license-class" name="licenseClass"><option value="A">Clase A</option><option value="B">Clase B</option></select>
+          <div class="captcha-block"><label class="sr-only" for="captcha-answer">Texto de verificación</label><input id="captcha-answer" name="captchaAnswer" autocomplete="off" placeholder="Ingrese el texto" maxlength="6"><img id="captcha-image" width="210" height="38" alt="Código captcha"><button type="button" id="refresh-captcha" class="link-button">Refrescar Captcha</button></div>
+          <a href="/" class="link-button home-link">Ir a la página principal</a><button type="submit" class="submit-button">CONSULTAR</button>
+        </form>
+      </section>
+
+      <!-- RESULTADOS DE EVALUACIONES — FORMATO OFICIAL MTC SEGÚN REFERENCIA -->
+      <section class="eval-results-container" id="eval-results-container" hidden>
+        <div class="eval-results-inner">
+          <!-- NOMBRE DEL CONDUCTOR / POSTULANTE EN AZUL -->
+          <h1 class="eval-nombre-titulo" id="eval-applicant-name">TORIBIO BUSTAMANTE DIAZ</h1>
+
+          <!-- 1. EVALUACIÓN MÉDICA -->
+          <div class="eval-block">
+            <h2 class="eval-subtitulo">Evaluación Médica</h2>
+            <div class="eval-table-scroll">
+              <table class="eval-tabla-oficial">
+                <thead>
+                  <tr>
+                    <th>Centro evaluador</th>
+                    <th>Fecha</th>
+                    <th>Vigente hasta</th>
+                    <th>Trámite</th>
+                    <th>Categoría</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td id="eval-med-centro">SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.</td>
+                    <td id="eval-med-fecha">16/10/2026</td>
+                    <td id="eval-med-vence">16/04/2027</td>
+                    <td id="eval-med-tramite">REVALIDACIÓN</td>
+                    <td id="eval-med-categoria">A I</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 2. EXAMEN DE CONOCIMIENTO -->
+          <div class="eval-block">
+            <h2 class="eval-subtitulo">Examen de Conocimiento</h2>
+            <div class="eval-table-scroll">
+              <table class="eval-tabla-oficial">
+                <thead>
+                  <tr>
+                    <th>Centro evaluador</th>
+                    <th>Fecha</th>
+                    <th>Vigente hasta</th>
+                    <th>Trámite</th>
+                    <th>Categoría</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td id="eval-con-centro">TOURING Y AUTOMOVIL CLUB DEL PERU</td>
+                    <td id="eval-con-fecha">16/10/2026</td>
+                    <td id="eval-con-vence">16/04/2027</td>
+                    <td id="eval-con-tramite">REVALIDACIÓN</td>
+                    <td id="eval-con-categoria">A I</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 3. EXAMEN DE CONDUCCIÓN -->
+          <div class="eval-block">
+            <h2 class="eval-subtitulo">Examen de Conducción</h2>
+            <div class="eval-table-scroll">
+              <table class="eval-tabla-oficial">
+                <thead>
+                  <tr>
+                    <th>Centro evaluador</th>
+                    <th>Fecha</th>
+                    <th>Vigente hasta</th>
+                    <th>Trámite</th>
+                    <th>Categoría</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td id="eval-hab-centro">CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO</td>
+                    <td id="eval-hab-fecha">16/10/2026</td>
+                    <td id="eval-hab-vence">16/04/2027</td>
+                    <td id="eval-hab-tramite">REVALIDACIÓN</td>
+                    <td id="eval-hab-categoria">A I</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BOTÓN IMPRIMIR EN ROJO CENTRADO -->
+          <div class="eval-imprimir-wrap">
+            <button type="button" class="btn-imprimir-rojo" onclick="window.print()">IMPRIMIR</button>
+          </div>
+
+          <!-- LINK VOLVER -->
+          <div class="eval-regresar-wrap">
+            <button type="button" id="eval-back-btn" class="eval-link-volver">‹ Realizar otra consulta</button>
+          </div>
+        </div>
+      </section>
+    </main>
     <footer><p class="compatibility">Navegadores Compatibles: Internet Explorer (Edge), Chrome y Firefox.</p><p><strong>Telf. (01) 615-7900&nbsp;&nbsp; Correo: atencionalciudadano@mtc.gob.pe</strong></p><p>Desarrollado por la Oficina General de Tecnología de la Información OGTI - MTC - 2022</p></footer>
   </div>
   <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message"><header><h2 id="modal-title">consulta evaluaciones</h2><button type="button" class="close-button" aria-label="Cerrar" data-close-modal>×</button></header><div id="modal-message" class="modal-alert" role="alert"></div><div class="modal-actions"><button type="button" class="accept-button" data-close-modal>Aceptar</button></div></section></div>

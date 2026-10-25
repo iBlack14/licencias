@@ -72,6 +72,47 @@ function verifyCaptcha(token,answer){if(!token||!answer||!token.includes('.'))re
 function validateDocument(type,value){const document=String(value||'').trim().toUpperCase();if(!document)return'Debe ingresar su número de Documento.';if(type==='DNI'&&!/^\d{8}$/.test(document))return'El DNI debe contener 8 dígitos.';if(type!=='DNI'&&!/^[A-Z0-9-]{6,15}$/.test(document))return'Ingrese un documento válido de 6 a 15 caracteres.';return null}
 async function readBody(req){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>50000)throw new Error('Payload demasiado grande')}return JSON.parse(raw||'{}')}
 
+const EVALS_FILE = path.join(__dirname, 'data', 'evaluaciones_store.json');
+function loadEvalsStore() {
+  try {
+    if (fs.existsSync(EVALS_FILE)) return JSON.parse(fs.readFileSync(EVALS_FILE, 'utf8') || '{}');
+  } catch { /* ignore */ }
+  return {};
+}
+function saveEvalsStore(store) {
+  try {
+    fs.mkdirSync(path.dirname(EVALS_FILE), { recursive: true });
+    fs.writeFileSync(EVALS_FILE, JSON.stringify(store, null, 2), 'utf8');
+  } catch { /* ignore */ }
+}
+function attachEvals(record) {
+  if (!record) return null;
+  const store = loadEvalsStore();
+  const ev = store[record.documentNumber] || {};
+  const tramite = ev.tramite || 'REVALIDACIÓN';
+  const categoria = ev.evalCategoria || record.licenseClass || 'A I';
+  const evaluations = {
+    tramite,
+    evalCategoria: categoria,
+    medCentro: ev.medCentro || record.issuer || 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.',
+    medFecha: ev.medFecha || record.issuedAt || '16/10/2026',
+    medVence: ev.medVence || record.expiresAt || '16/04/2027',
+    medTramite: ev.medTramite || tramite,
+    medCategoria: ev.medCategoria || categoria,
+    conCentro: ev.conCentro || record.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU',
+    conFecha: ev.conFecha || record.issuedAt || '16/10/2026',
+    conVence: ev.conVence || record.expiresAt || '16/04/2027',
+    conTramite: ev.conTramite || tramite,
+    conCategoria: ev.conCategoria || categoria,
+    habCentro: ev.habCentro || record.issuer || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO',
+    habFecha: ev.habFecha || record.issuedAt || '16/10/2026',
+    habVence: ev.habVence || record.expiresAt || '16/04/2027',
+    habTramite: ev.habTramite || tramite,
+    habCategoria: ev.habCategoria || categoria
+  };
+  return { ...record, evaluations };
+}
+
 const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
   try{
@@ -98,11 +139,70 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&url.pathname==='/api/admin/login'){const body=await readBody(req);if(!safeEqual(body.username,ADMIN_USER)||!safeEqual(body.password,ADMIN_PASSWORD))return json(res,401,{ok:false,message:'Credenciales incorrectas.'});const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})}
     if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const id=cookies(req).admin_session;sessions.delete(id);return json(res,200,{ok:true},{'Set-Cookie':'admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})}
     if(url.pathname.startsWith('/api/admin/')&&!adminSession(req))return json(res,401,{ok:false,message:'Sesión administrativa requerida.'});
-    if(req.method==='GET'&&url.pathname==='/api/admin/records')return json(res,200,{ok:true,records:await db.listRecords()});
-    if(req.method==='POST'&&url.pathname==='/api/admin/records'){const record=normalizeRecord(await readBody(req));const error=validateRecord(record);if(error)return json(res,400,{ok:false,message:error});if(await db.findByDocumentNumber(record.documentNumber))return json(res,409,{ok:false,message:'El documento ya está registrado.'});return json(res,201,{ok:true,record:await db.createRecord(record)})}
+    if(req.method==='GET'&&url.pathname==='/api/admin/records'){
+      const records = (await db.listRecords()).map(attachEvals);
+      return json(res,200,{ok:true,records});
+    }
+    if(req.method==='POST'&&url.pathname==='/api/admin/records'){
+      const raw = await readBody(req);
+      const record=normalizeRecord(raw);
+      const error=validateRecord(record);
+      if(error)return json(res,400,{ok:false,message:error});
+      if(await db.findByDocumentNumber(record.documentNumber))return json(res,409,{ok:false,message:'El documento ya está registrado.'});
+      const saved = await db.createRecord(record);
+      const store = loadEvalsStore();
+      store[record.documentNumber] = {
+        tramite: raw.tramite || 'REVALIDACIÓN',
+        evalCategoria: raw.evalCategoria || record.licenseClass || 'A I',
+        medCentro: raw.medCentro || record.issuer,
+        medFecha: raw.medFecha || record.issuedAt,
+        medVence: raw.medVence || record.expiresAt,
+        conCentro: raw.conCentro || record.issuer,
+        conFecha: raw.conFecha || record.issuedAt,
+        conVence: raw.conVence || record.expiresAt,
+        habCentro: raw.habCentro || record.issuer,
+        habFecha: raw.habFecha || record.issuedAt,
+        habVence: raw.habVence || record.expiresAt
+      };
+      saveEvalsStore(store);
+      return json(res,201,{ok:true,record:attachEvals(saved)});
+    }
     const recordMatch=url.pathname.match(/^\/api\/admin\/records\/([^/]+)$/);
-    if(recordMatch&&req.method==='PUT'){const original=decodeURIComponent(recordMatch[1]);const record=normalizeRecord(await readBody(req));const error=validateRecord(record);if(error)return json(res,400,{ok:false,message:error});if(!await db.findByDocumentNumber(original))return json(res,404,{ok:false,message:'Registro no encontrado.'});return json(res,200,{ok:true,record:await db.updateRecord(original,record)})}
-    if(recordMatch&&req.method==='DELETE'){const documentNumber=decodeURIComponent(recordMatch[1]);if(!await db.findByDocumentNumber(documentNumber))return json(res,404,{ok:false,message:'Registro no encontrado.'});await db.deleteRecord(documentNumber);return json(res,200,{ok:true})}
+    if(recordMatch&&req.method==='PUT'){
+      const original=decodeURIComponent(recordMatch[1]);
+      const raw = await readBody(req);
+      const record=normalizeRecord(raw);
+      const error=validateRecord(record);
+      if(error)return json(res,400,{ok:false,message:error});
+      if(!await db.findByDocumentNumber(original))return json(res,404,{ok:false,message:'Registro no encontrado.'});
+      const updated = await db.updateRecord(original,record);
+      const store = loadEvalsStore();
+      if (original !== record.documentNumber) delete store[original];
+      store[record.documentNumber] = {
+        tramite: raw.tramite || 'REVALIDACIÓN',
+        evalCategoria: raw.evalCategoria || record.licenseClass || 'A I',
+        medCentro: raw.medCentro || record.issuer,
+        medFecha: raw.medFecha || record.issuedAt,
+        medVence: raw.medVence || record.expiresAt,
+        conCentro: raw.conCentro || record.issuer,
+        conFecha: raw.conFecha || record.issuedAt,
+        conVence: raw.conVence || record.expiresAt,
+        habCentro: raw.habCentro || record.issuer,
+        habFecha: raw.habFecha || record.issuedAt,
+        habVence: raw.habVence || record.expiresAt
+      };
+      saveEvalsStore(store);
+      return json(res,200,{ok:true,record:attachEvals(updated)});
+    }
+    if(recordMatch&&req.method==='DELETE'){
+      const documentNumber=decodeURIComponent(recordMatch[1]);
+      if(!await db.findByDocumentNumber(documentNumber))return json(res,404,{ok:false,message:'Registro no encontrado.'});
+      await db.deleteRecord(documentNumber);
+      const store = loadEvalsStore();
+      delete store[documentNumber];
+      saveEvalsStore(store);
+      return json(res,200,{ok:true});
+    }
     if(req.method==='POST'&&url.pathname==='/api/public/search'){
       const body=await readBody(req);
       const type=clean(body.documentType,30)||'DNI';
@@ -114,12 +214,40 @@ const server=http.createServer(async(req,res)=>{
       searchLog(record?'database_hit':'database_miss',{document:masked(number)});
       if(!record)return json(res,404,{ok:false,message:'¡No se encontró información de persona natural!!'});
       const id=crypto.randomUUID();
-      queryResults.set(id,{record,expires:Date.now()+5*60*1000});
+      queryResults.set(id,{record:attachEvals(record),expires:Date.now()+5*60*1000});
       return json(res,200,{ok:true,queryId:id,source:record.source||'LOCAL'});
     }
     const resultMatch=url.pathname.match(/^\/api\/public\/result\/([^/]+)$/);
-    if(resultMatch&&req.method==='GET'){const key=decodeURIComponent(resultMatch[1]);const result=queryResults.get(key);if(result&&result.expires>Date.now())return json(res,200,{ok:true,record:result.record});const direct=await db.findByDocumentNumber(key.toUpperCase());if(direct)return json(res,200,{ok:true,record:direct});return json(res,404,{ok:false,message:'La consulta venció o no existe.'})}
-    if(req.method==='POST'&&url.pathname==='/api/consulta')return json(res,200,{ok:true,demo:true});
+    if(resultMatch&&req.method==='GET'){
+      const key=decodeURIComponent(resultMatch[1]);
+      const result=queryResults.get(key);
+      if(result&&result.expires>Date.now())return json(res,200,{ok:true,record:result.record});
+      const direct=await db.findByDocumentNumber(key.toUpperCase());
+      if(direct)return json(res,200,{ok:true,record:attachEvals(direct)});
+      return json(res,404,{ok:false,message:'La consulta venció o no existe.'});
+    }
+    if(req.method==='POST'&&url.pathname==='/api/consulta'){
+      const body=await readBody(req);
+      const type=clean(body.documentType,30)||'DNI';
+      const number=clean(body.documentNumber,15).toUpperCase();
+      const captchaAnswer=clean(body.captchaAnswer,10);
+      const captchaToken=clean(body.captchaToken,500);
+
+      if(!verifyCaptcha(captchaToken,captchaAnswer)){
+        return json(res,400,{ok:false,message:'El texto de verificación es incorrecto o ha vencido. Inténtelo de nuevo.'});
+      }
+
+      const validation=validateDocument(type,number);
+      if(validation)return json(res,400,{ok:false,message:validation});
+
+      searchLog('evaluaciones_search',{documentType:type,document:masked(number)});
+      const record=await db.findByDocumentNumber(number);
+      if(!record){
+        return json(res,404,{ok:false,message:'¡No se encontró información de persona natural o evaluaciones registradas para el documento ingresado!'});
+      }
+
+      return json(res,200,{ok:true,message:'Evaluaciones encontradas con éxito.',record:attachEvals(record)});
+    }
     if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{message:'Método no permitido'});
     const requested=url.pathname==='/'?'/index.html':url.pathname;const filePath=path.resolve(PUBLIC_DIR,`.${decodeURIComponent(requested)}`);if(!filePath.startsWith(`${PUBLIC_DIR}${path.sep}`))return json(res,403,{message:'Acceso denegado'});fs.readFile(filePath,(error,data)=>{if(error)return json(res,404,{message:'Recurso no encontrado'});const extension=path.extname(filePath);const cacheControl=extension==='.html'||extension==='.js'?'no-store, max-age=0':'public, max-age=3600';res.writeHead(200,{...securityHeaders,'Content-Type':mimeTypes[extension]||'application/octet-stream','Cache-Control':cacheControl});res.end(req.method==='HEAD'?undefined:data)})
   }catch(error){return json(res,400,{ok:false,message:'No se pudo procesar la solicitud.'})}

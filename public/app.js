@@ -67,8 +67,12 @@ form.addEventListener('submit', async (event) => {
       })
     });
     const data = await response.json();
-    showModal(data.message, response.ok);
-    if (!response.ok) await refreshCaptcha();
+    if (response.ok && data.record) {
+      renderEvaluationResults(data.record);
+    } else {
+      showModal(data.message || 'No se encontraron registros de evaluaciones.', false);
+      await refreshCaptcha();
+    }
   } catch {
     showModal('No se pudo completar la consulta local. Verifique que el servidor esté activo.');
   } finally {
@@ -76,6 +80,59 @@ form.addEventListener('submit', async (event) => {
     submitButton.textContent = 'CONSULTAR';
   }
 });
+
+function renderEvaluationResults(record) {
+  const consultationSection = document.querySelector('#consultation-section');
+  const resultsContainer = document.querySelector('#eval-results-container');
+
+  // Nombre en mayúsculas
+  const fullName = `${record.firstNames || ''} ${record.lastNames || ''}`.trim() || 'TORIBIO BUSTAMANTE DIAZ';
+  document.querySelector('#eval-applicant-name').textContent = fullName.toUpperCase();
+
+  // Evaluaciones específicas o derivadas del registro
+  const ev = record.evaluations || record;
+  const tramite = ev.tramite || 'REVALIDACIÓN';
+  const categoria = ev.evalCategoria || record.licenseClass || 'A I';
+
+  // 1. Evaluación Médica
+  document.querySelector('#eval-med-centro').textContent = ev.medCentro || record.issuer || 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.';
+  document.querySelector('#eval-med-fecha').textContent = ev.medFecha || record.issuedAt || '16/10/2026';
+  document.querySelector('#eval-med-vence').textContent = ev.medVence || record.expiresAt || '16/04/2027';
+  document.querySelector('#eval-med-tramite').textContent = ev.medTramite || tramite;
+  document.querySelector('#eval-med-categoria').textContent = ev.medCategoria || categoria;
+
+  // 2. Examen de Conocimiento
+  document.querySelector('#eval-con-centro').textContent = ev.conCentro || record.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
+  document.querySelector('#eval-con-fecha').textContent = ev.conFecha || record.issuedAt || '16/10/2026';
+  document.querySelector('#eval-con-vence').textContent = ev.conVence || record.expiresAt || '16/04/2027';
+  document.querySelector('#eval-con-tramite').textContent = ev.conTramite || tramite;
+  document.querySelector('#eval-con-categoria').textContent = ev.conCategoria || categoria;
+
+  // 3. Examen de Conducción
+  document.querySelector('#eval-hab-centro').textContent = ev.habCentro || record.issuer || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
+  document.querySelector('#eval-hab-fecha').textContent = ev.habFecha || record.issuedAt || '16/10/2026';
+  document.querySelector('#eval-hab-vence').textContent = ev.habVence || record.expiresAt || '16/04/2027';
+  document.querySelector('#eval-hab-tramite').textContent = ev.habTramite || tramite;
+  document.querySelector('#eval-hab-categoria').textContent = ev.habCategoria || categoria;
+
+  // Ocultar búsqueda y mostrar resultados
+  consultationSection.hidden = true;
+  resultsContainer.hidden = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Botón para volver a consultar
+const backBtn = document.querySelector('#eval-back-btn');
+if (backBtn) {
+  backBtn.addEventListener('click', () => {
+    document.querySelector('#eval-results-container').hidden = true;
+    document.querySelector('#consultation-section').hidden = false;
+    documentInput.value = '';
+    captchaInput.value = '';
+    refreshCaptcha();
+    documentInput.focus();
+  });
+}
 
 typeSelect.addEventListener('change', updateInputMode);
 refreshButton.addEventListener('click', refreshCaptcha);

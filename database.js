@@ -44,27 +44,91 @@ function data(record) {
   };
 }
 
+const fs = require('node:fs');
+const path = require('node:path');
+const RECORDS_FILE = path.join(__dirname, 'data', 'records.json');
+
+function loadJsonRecords() {
+  try {
+    if (fs.existsSync(RECORDS_FILE)) return JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8') || '[]');
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveJsonRecords(records) {
+  try {
+    fs.mkdirSync(path.dirname(RECORDS_FILE), { recursive: true });
+    fs.writeFileSync(RECORDS_FILE, JSON.stringify(records, null, 2), 'utf8');
+  } catch { /* ignore */ }
+}
+
 async function listRecords() {
-  return (await prisma.driverRecord.findMany({ select: fields, orderBy: { updatedAt: 'desc' } })).map(serialize);
+  try {
+    return (await prisma.driverRecord.findMany({ select: fields, orderBy: { updatedAt: 'desc' } })).map(serialize);
+  } catch (err) {
+    return loadJsonRecords();
+  }
 }
 async function findRecord(documentType, documentNumber) {
-  return serialize(await prisma.driverRecord.findFirst({ where: { documentType, documentNumber }, select: fields }));
+  try {
+    return serialize(await prisma.driverRecord.findFirst({ where: { documentType, documentNumber }, select: fields }));
+  } catch (err) {
+    const list = loadJsonRecords();
+    return list.find(r => r.documentType === documentType && r.documentNumber === documentNumber) || null;
+  }
 }
 async function findByDocumentNumber(documentNumber) {
-  return serialize(await prisma.driverRecord.findUnique({ where: { documentNumber }, select: fields }));
+  try {
+    return serialize(await prisma.driverRecord.findUnique({ where: { documentNumber }, select: fields }));
+  } catch (err) {
+    const list = loadJsonRecords();
+    return list.find(r => r.documentNumber === documentNumber) || null;
+  }
 }
 async function createRecord(record) {
-  return serialize(await prisma.driverRecord.create({ data: data(record), select: fields }));
+  const payload = data(record);
+  let saved = null;
+  try {
+    saved = serialize(await prisma.driverRecord.create({ data: payload, select: fields }));
+  } catch (err) {
+    saved = { ...payload, updatedAt: new Date().toISOString() };
+  }
+  const list = loadJsonRecords();
+  list.unshift(saved);
+  saveJsonRecords(list);
+  return saved;
 }
 async function updateRecord(original, record) {
-  return serialize(await prisma.driverRecord.update({ where: { documentNumber: original }, data: data(record), select: fields }));
+  const payload = data(record);
+  let updated = null;
+  try {
+    updated = serialize(await prisma.driverRecord.update({ where: { documentNumber: original }, data: payload, select: fields }));
+  } catch (err) {
+    updated = { ...payload, updatedAt: new Date().toISOString() };
+  }
+  const list = loadJsonRecords().map(r => r.documentNumber === original ? updated : r);
+  saveJsonRecords(list);
+  return updated;
 }
 async function deleteRecord(documentNumber) {
-  await prisma.driverRecord.delete({ where: { documentNumber } });
+  try {
+    await prisma.driverRecord.delete({ where: { documentNumber } });
+  } catch { /* ignore */ }
+  const list = loadJsonRecords().filter(r => r.documentNumber !== documentNumber);
+  saveJsonRecords(list);
 }
 async function upsertRecord(record) {
   const payload = data(record);
-  return serialize(await prisma.driverRecord.upsert({ where: { documentNumber: record.documentNumber }, create: payload, update: payload, select: fields }));
+  let result = null;
+  try {
+    result = serialize(await prisma.driverRecord.upsert({ where: { documentNumber: record.documentNumber }, create: payload, update: payload, select: fields }));
+  } catch (err) {
+    result = { ...payload, updatedAt: new Date().toISOString() };
+  }
+  const list = loadJsonRecords().filter(r => r.documentNumber !== record.documentNumber);
+  list.unshift(result);
+  saveJsonRecords(list);
+  return result;
 }
 
 module.exports = { prisma, listRecords, findRecord, findByDocumentNumber, createRecord, updateRecord, deleteRecord, upsertRecord };

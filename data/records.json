@@ -14,5 +14,21 @@
     "issuer": "MUNICIPALIDAD PROVINCIAL SAN IGNACIO",
     "points": 0,
     "updatedAt": "2026-10-24T00:00:00.000Z"
+  },
+  {
+    "documentType": "DNI",
+    "documentNumber": "44889900",
+    "lastNames": "BUSTAMANTE DIAZ",
+    "firstNames": "TORIBIO",
+    "licenseClass": "A-I",
+    "licenseNumber": "Q44889900",
+    "licenseType": "FISICA",
+    "status": "Vigente",
+    "issuedAt": "16/10/2026",
+    "expiresAt": "16/04/2027",
+    "restrictions": "SIN RESTRICCIONES",
+    "issuer": "SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.",
+    "points": 0,
+    "updatedAt": "2026-10-25T00:00:00.000Z"
   }
 ]

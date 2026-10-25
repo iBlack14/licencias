@@ -50,3 +50,139 @@ footer p { margin: 2px 0; }
   .home-link { margin-top: 36px; }
   footer { font-size: 13px; }
 }
+
+/* =====================================================
+   RESULTADOS DE EVALUACIONES — ESTILO EXACTO CAPTURA MTC
+   ===================================================== */
+.eval-results-container {
+  padding: 24px 30px 50px;
+  background: #ffffff;
+  animation: fadeIn .3s ease;
+  min-height: 520px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.eval-results-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+/* Título con el nombre del postulante en azul oficial */
+.eval-nombre-titulo {
+  color: #005aa9;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 10px 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+/* Subtítulos de sección: Evaluación Médica, Examen de Conocimiento, etc. */
+.eval-subtitulo {
+  color: #4a4a4a;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 22px 0 10px 0;
+  text-align: left;
+}
+
+.eval-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 22px;
+}
+
+/* Tabla oficial con encabezado azul */
+.eval-tabla-oficial {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #777777;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+}
+
+.eval-tabla-oficial th {
+  background-color: #0066b2;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 12px;
+  border: 1px solid #777777;
+  white-space: nowrap;
+}
+
+.eval-tabla-oficial td {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: #333333;
+  text-align: center;
+  border: 1px solid #777777;
+  text-transform: uppercase;
+  background-color: #ffffff;
+}
+
+/* Botón IMPRIMIR centrado en rojo */
+.eval-imprimir-wrap {
+  text-align: center;
+  margin-top: 35px;
+  margin-bottom: 12px;
+}
+
+.btn-imprimir-rojo {
+  background-color: #d9534f;
+  color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 32px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: background-color .15s ease;
+}
+
+.btn-imprimir-rojo:hover {
+  background-color: #c9302c;
+}
+
+/* Enlace regresar */
+.eval-regresar-wrap {
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.eval-link-volver {
+  background: none;
+  border: none;
+  color: #0000ee;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.eval-link-volver:hover {
+  text-decoration: underline;
+}
+
+@media print {
+  header, footer, .eval-imprimir-wrap, .eval-regresar-wrap, .home-link {
+    display: none !important;
+  }
+  .page-shell {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .eval-results-container {
+    padding: 0 !important;
+  }
+}
