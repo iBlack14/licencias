@@ -6,10 +6,18 @@ const CAPTCHA_MAP = {
   'cinturon': '9.png', 'desarmador': '10.png', 'edificio': '11.png', 'gafas': '12.png',
   'gato': '13.png', 'laptop': '14.png', 'linterna': '15.png', 'llaves': '16.png',
   'manzana': '17.png', 'media': '18.png', 'mesa': '19.png', 'mochila': '20.png',
-  'perro': '21.png', 'pez': '22.png', 'pinia': '23.png', 'platano': '24.png',
+  'perro': '21.png', 'pez': '22.png', 'pina': '23.png', 'platano': '24.png',
   'puerta': '25.png', 'reloj': '26.png', 'scooter': '27.png', 'silla': '28.png',
-  'tasa': '29.png', 'tienda': '30.png', 'timon': '31.png', 'zapato': '32.png'
+  'taza': '29.png', 'tienda': '30.png', 'timon': '31.png', 'zapato': '32.png'
 };
+function log(event, details = {}) {
+  console.log(JSON.stringify({ time: new Date().toISOString(), scope: 'mtc', event, ...details }));
+}
+
+function masked(value) {
+  const text = String(value || '');
+  return '*'.repeat(Math.max(0, text.length - 4)) + text.slice(-4);
+}
 
 /**
  * Consulta en vivo al Portal Oficial del MTC (https://licencias.mtc.gob.pe/)
@@ -18,6 +26,7 @@ const CAPTCHA_MAP = {
 async function fetchMtcDriver(docType = 'DNI', docNumber) {
   const number = String(docNumber || '').trim().toUpperCase();
   if (!number) return { ok: false, message: 'Número de documento requerido.' };
+  log('lookup_started', { documentType: docType, document: masked(number) });
 
   let browser;
   let deadline;
@@ -28,6 +37,7 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
+    log('browser_started');
     const page = await browser.newPage();
 
     let rateLimited = false;
@@ -35,7 +45,8 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
       if (res.status() === 429) rateLimited = true;
     });
 
-    await page.goto('https://licencias.mtc.gob.pe/#/index', { timeout: 30000, waitUntil: 'networkidle' });
+    await page.goto('https://licencias.mtc.gob.pe/#/index', { timeout: 15000, waitUntil: 'domcontentloaded' });
+    log('portal_loaded', { url: page.url() });
 
     if (docType !== 'DNI') {
       const advToggle = await page.$('#mat-slide-toggle-1-input, .mat-slide-toggle-input');
@@ -59,8 +70,9 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
     const match = consigna.match(/Selecciona la imagen de (.+)/i);
     if (!match) throw new Error('No se pudo identificar la consigna del captcha');
 
-    const targetName = match[1].trim().toLowerCase();
+    const targetName = match[1].trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     const fileName = CAPTCHA_MAP[targetName] || '1.png';
+    log('captcha_detected', { target: targetName, image: fileName });
 
     await page.click(`app-captcha-imagenes img[src*="${fileName}"]`);
     await page.waitForTimeout(1200);
@@ -84,6 +96,7 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
       page.waitForURL('**/search**', { timeout: 15000 }).then(() => 'search_page'),
       page.waitForSelector('.swal2-container', { timeout: 15000 }).then(() => 'swal_modal')
     ]);
+    log('portal_outcome', { outcome, rateLimited });
 
     if (outcome === 'swal_modal') {
       const modalText = await page.$eval('.swal2-container', el => el.innerText.trim()).catch(() => '');
@@ -113,6 +126,7 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
     await browser.close();
 
     if (!extracted['Nombres'] && !extracted['Apellidos']) {
+      log('record_not_found');
       return { ok: false, error: 'not_found', message: '¡No se encontró información de persona natural!!' };
     }
 
@@ -134,8 +148,10 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
       updatedAt: new Date().toISOString()
     };
 
+    log('record_found', { document: masked(number), licenseClass: record.licenseClass });
     return { ok: true, record };
   } catch (err) {
+    log('lookup_failed', { name: err.name, message: err.message });
     return { ok: false, error: 'error', message: 'La consulta está tardando más de lo esperado. Inténtelo nuevamente.' };
   } finally {
     clearTimeout(deadline);
