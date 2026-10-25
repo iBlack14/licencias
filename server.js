@@ -41,6 +41,11 @@ function safeEqual(a,b){const left=Buffer.from(String(a));const right=Buffer.fro
 function clean(value,max=120){return String(value||'').trim().slice(0,max)}
 function masked(value){const text=String(value||'');return '*'.repeat(Math.max(0,text.length-4))+text.slice(-4)}
 function searchLog(event,details={}){console.log(JSON.stringify({time:new Date().toISOString(),scope:'search',event,...details}))}
+function integrationCors(req){
+  const origin=String(req.headers.origin||'');
+  if(!origin.startsWith('chrome-extension://'))return{};
+  return{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'};
+}
 function normalizeDocumentType(value){const type=clean(value,30).toUpperCase();if(type==='DNI'||type.includes('NACIONAL'))return 'DNI';if(type==='CE'||type.includes('EXTRANJER'))return 'CE';if(type.includes('PASAPORTE'))return 'PAS';if(type.includes('PTP')||type.includes('CPP'))return 'PTP';if(type.includes('SOLICITANTE'))return 'CARNE_SOLICITANTE';if(type.includes('TARJETA'))return 'TARJETA_IDENTIDAD';return type||'DNI'}
 function normalizeRecord(input){return{documentType:normalizeDocumentType(input.documentType),documentNumber:clean(input.documentNumber,15).toUpperCase(),lastNames:clean(input.lastNames),firstNames:clean(input.firstNames),licenseClass:clean(input.licenseClass,30),licenseNumber:clean(input.licenseNumber,30),licenseType:clean(input.licenseType,30)||'FISICA',status:clean(input.status,30)||'Vigente',issuedAt:clean(input.issuedAt,20),expiresAt:clean(input.expiresAt,20),restrictions:clean(input.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(input.issuer,180),points:Number.isFinite(Number(input.points))?Number(input.points):0,source:clean(input.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
 function validateRecord(record){const error=validateDocument(record.documentType,record.documentNumber);if(error)return error;if(!record.lastNames||!record.firstNames)return 'Ingrese apellidos y nombres.';if(!record.licenseClass||!record.licenseNumber)return 'Ingrese clase y número de licencia.';return null}
@@ -53,22 +58,23 @@ const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
   try{
     if(req.method==='GET'&&url.pathname==='/api/captcha')return json(res,200,makeCaptcha());
-    if(req.method==='GET'&&url.pathname==='/api/integrations/status'){
+    if(req.method==='OPTIONS'&&url.pathname.startsWith('/api/integrations/')){res.writeHead(204,{...securityHeaders,...integrationCors(req)});return res.end()}
+    if(req.method==='GET'&&/^\/api\/integrations\/status\/?$/.test(url.pathname)){
       const authorization=String(req.headers.authorization||'');
       const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
-      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'});
-      return json(res,200,{ok:true,message:'Integración disponible.'});
+      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'},integrationCors(req));
+      return json(res,200,{ok:true,message:'Integración disponible.',version:'1.0.3'},integrationCors(req));
     }
     if(req.method==='POST'&&url.pathname==='/api/integrations/mtc-record'){
       const authorization=String(req.headers.authorization||'');
       const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
-      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'});
+      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'},integrationCors(req));
       const record=normalizeRecord({...await readBody(req),source:'MTC_EXTENSION'});
       const error=validateRecord(record);
-      if(error)return json(res,400,{ok:false,message:error});
+      if(error)return json(res,400,{ok:false,message:error},integrationCors(req));
       const saved=await db.upsertRecord(record);
       searchLog('extension_record_saved',{documentType:saved.documentType,document:masked(saved.documentNumber)});
-      return json(res,200,{ok:true,record:saved});
+      return json(res,200,{ok:true,record:saved},integrationCors(req));
     }
     if(req.method==='POST'&&url.pathname==='/api/admin/login'){const body=await readBody(req);if(!safeEqual(body.username,ADMIN_USER)||!safeEqual(body.password,ADMIN_PASSWORD))return json(res,401,{ok:false,message:'Credenciales incorrectas.'});const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})}
     if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const id=cookies(req).admin_session;sessions.delete(id);return json(res,200,{ok:true},{'Set-Cookie':'admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})}
