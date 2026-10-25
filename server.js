@@ -1,0 +1,93 @@
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { fetchMtcDriver } = require('./mtc_service');
+const db = require('./database');
+
+// Carga variables desde .env sin dependencias externas
+(function loadEnv() {
+  try {
+    const envPath = path.join(__dirname, '.env');
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const m = line.match(/^\s*([^#=\s][^=]*)=(.*)$/);
+      if (m) {
+        const key = m[1].trim();
+        const val = m[2].trim().replace(/^['"]|['"]$/g, '');
+        if (process.env[key] === undefined) process.env[key] = val;
+      }
+    }
+  } catch { /* .env opcional */ }
+})();
+
+const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '127.0.0.1';
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || crypto.randomBytes(32).toString('hex');
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Cambiar123!';
+const sessions = new Map();
+const queryResults = new Map();
+
+const mimeTypes = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.json':'application/json; charset=utf-8','.ttf':'font/ttf'};
+const securityHeaders = {'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Permissions-Policy':'camera=(), geolocation=()','Content-Security-Policy':"default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; script-src 'self'; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
+
+function json(res,status,body,extra={}){res.writeHead(status,{...securityHeaders,'Content-Type':mimeTypes['.json'],'Cache-Control':'no-store, private',...extra});res.end(JSON.stringify(body))}
+function cookies(req){return Object.fromEntries(String(req.headers.cookie||'').split(';').map(v=>v.trim().split('=')).filter(v=>v.length===2))}
+function adminSession(req){const item=sessions.get(cookies(req).admin_session);if(!item||item.expires<Date.now())return null;return item}
+function safeEqual(a,b){const left=Buffer.from(String(a));const right=Buffer.from(String(b));return left.length===right.length&&crypto.timingSafeEqual(left,right)}
+function clean(value,max=120){return String(value||'').trim().slice(0,max)}
+function normalizeRecord(input){return{documentType:clean(input.documentType,30)||'DNI',documentNumber:clean(input.documentNumber,15).toUpperCase(),lastNames:clean(input.lastNames),firstNames:clean(input.firstNames),licenseClass:clean(input.licenseClass,30),licenseNumber:clean(input.licenseNumber,30),licenseType:clean(input.licenseType,30)||'FISICA',status:clean(input.status,30)||'Vigente',issuedAt:clean(input.issuedAt,20),expiresAt:clean(input.expiresAt,20),restrictions:clean(input.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(input.issuer,180),points:Number.isFinite(Number(input.points))?Number(input.points):0,source:clean(input.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
+function validateRecord(record){const error=validateDocument(record.documentType,record.documentNumber);if(error)return error;if(!record.lastNames||!record.firstNames)return 'Ingrese apellidos y nombres.';if(!record.licenseClass||!record.licenseNumber)return 'Ingrese clase y número de licencia.';return null}
+function makeCaptcha(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<6;i+=1)code+=alphabet[crypto.randomInt(alphabet.length)];const expires=Date.now()+300000;const payload=Buffer.from(JSON.stringify({code,expires})).toString('base64url');const signature=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');const token=`${payload}.${signature}`;const chars=[...code].map((char,index)=>`<text x="${31+index*27}" y="29">${char}</text>`).join('');const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="210" height="38"><rect width="210" height="38" fill="#fffaf0"/><g font-family="Arial" font-size="27" fill="#171717">${chars}</g></svg>`;return{token,image:`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`}}
+function verifyCaptcha(token,answer){if(!token||!answer||!token.includes('.'))return false;try{const[payload,signature]=token.split('.');const expected=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');if(signature.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected)))return false;const data=JSON.parse(Buffer.from(payload,'base64url').toString('utf8'));return data.expires>Date.now()&&data.code===String(answer).trim().toUpperCase()}catch{return false}}
+function validateDocument(type,value){const document=String(value||'').trim().toUpperCase();if(!document)return'Debe ingresar su número de Documento.';if(type==='DNI'&&!/^\d{8}$/.test(document))return'El DNI debe contener 8 dígitos.';if(type!=='DNI'&&!/^[A-Z0-9-]{6,15}$/.test(document))return'Ingrese un documento válido de 6 a 15 caracteres.';return null}
+async function readBody(req){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>50000)throw new Error('Payload demasiado grande')}return JSON.parse(raw||'{}')}
+
+const server=http.createServer(async(req,res)=>{
+  const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
+  try{
+    if(req.method==='GET'&&url.pathname==='/api/captcha')return json(res,200,makeCaptcha());
+    if(req.method==='POST'&&url.pathname==='/api/admin/login'){const body=await readBody(req);if(!safeEqual(body.username,ADMIN_USER)||!safeEqual(body.password,ADMIN_PASSWORD))return json(res,401,{ok:false,message:'Credenciales incorrectas.'});const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})}
+    if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const id=cookies(req).admin_session;sessions.delete(id);return json(res,200,{ok:true},{'Set-Cookie':'admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})}
+    if(url.pathname.startsWith('/api/admin/')&&!adminSession(req))return json(res,401,{ok:false,message:'Sesión administrativa requerida.'});
+    if(req.method==='GET'&&url.pathname==='/api/admin/records')return json(res,200,{ok:true,records:await db.listRecords()});
+    if(req.method==='POST'&&url.pathname==='/api/admin/records'){const record=normalizeRecord(await readBody(req));const error=validateRecord(record);if(error)return json(res,400,{ok:false,message:error});if(await db.findByDocumentNumber(record.documentNumber))return json(res,409,{ok:false,message:'El documento ya está registrado.'});return json(res,201,{ok:true,record:await db.createRecord(record)})}
+    const recordMatch=url.pathname.match(/^\/api\/admin\/records\/([^/]+)$/);
+    if(recordMatch&&req.method==='PUT'){const original=decodeURIComponent(recordMatch[1]);const record=normalizeRecord(await readBody(req));const error=validateRecord(record);if(error)return json(res,400,{ok:false,message:error});if(!await db.findByDocumentNumber(original))return json(res,404,{ok:false,message:'Registro no encontrado.'});return json(res,200,{ok:true,record:await db.updateRecord(original,record)})}
+    if(recordMatch&&req.method==='DELETE'){const documentNumber=decodeURIComponent(recordMatch[1]);if(!await db.findByDocumentNumber(documentNumber))return json(res,404,{ok:false,message:'Registro no encontrado.'});await db.deleteRecord(documentNumber);return json(res,200,{ok:true})}
+    if(req.method==='POST'&&url.pathname==='/api/public/search'){
+      const body=await readBody(req);
+      const type=clean(body.documentType,30)||'DNI';
+      const number=clean(body.documentNumber,15).toUpperCase();
+      const validation=validateDocument(type,number);
+      if(validation)return json(res,400,{ok:false,message:validation});
+      let record=await db.findRecord(type,number);
+      if(!record){
+        try{
+          const mtc=await fetchMtcDriver(type,number);
+          if(mtc.ok&&mtc.record){
+            record=normalizeRecord(mtc.record);
+            record=await db.upsertRecord(record);
+          }else if(mtc.error==='rate_limited'){
+            return json(res,429,{ok:false,message:mtc.message});
+          }
+        }catch(e){}
+      }
+      if(!record)return json(res,404,{ok:false,message:'¡No se encontró información de persona natural!!'});
+      const id=crypto.randomUUID();
+      queryResults.set(id,{record,expires:Date.now()+5*60*1000});
+      return json(res,200,{ok:true,queryId:id,source:record.source||'LOCAL'});
+    }
+    const resultMatch=url.pathname.match(/^\/api\/public\/result\/([^/]+)$/);
+    if(resultMatch&&req.method==='GET'){const key=decodeURIComponent(resultMatch[1]);const result=queryResults.get(key);if(result&&result.expires>Date.now())return json(res,200,{ok:true,record:result.record});const direct=await db.findByDocumentNumber(key.toUpperCase());if(direct)return json(res,200,{ok:true,record:direct});return json(res,404,{ok:false,message:'La consulta venció o no existe.'})}
+    if(req.method==='POST'&&url.pathname==='/api/consulta')return json(res,200,{ok:true,demo:true});
+    if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{message:'Método no permitido'});
+    const requested=url.pathname==='/'?'/index.html':url.pathname;const filePath=path.resolve(PUBLIC_DIR,`.${decodeURIComponent(requested)}`);if(!filePath.startsWith(`${PUBLIC_DIR}${path.sep}`))return json(res,403,{message:'Acceso denegado'});fs.readFile(filePath,(error,data)=>{if(error)return json(res,404,{message:'Recurso no encontrado'});res.writeHead(200,{...securityHeaders,'Content-Type':mimeTypes[path.extname(filePath)]||'application/octet-stream','Cache-Control':path.extname(filePath)==='.html'?'no-store':'public, max-age=3600'});res.end(req.method==='HEAD'?undefined:data)})
+  }catch(error){return json(res,400,{ok:false,message:'No se pudo procesar la solicitud.'})}
+});
+
+server.requestTimeout=45000;server.headersTimeout=40000;server.keepAliveTimeout=10000;
+if(require.main===module)server.listen(PORT,HOST,()=>console.log(`Aplicación disponible en http://${HOST}:${PORT}`));
+module.exports={server,validateDocument,verifyCaptcha,makeCaptcha,normalizeRecord,validateRecord};

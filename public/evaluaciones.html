@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consulta de evaluaciones</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero"><img src="/assets/images/cabecera_consulta_evaluaciones.svg" alt="Consulta de Examen Médico, Aptitud, COFIPRO y habilidades en la conducción"></header>
+    <main><section class="consultation" aria-labelledby="page-title"><h1 id="page-title">Selecciona tu documento de identidad:</h1>
+      <form id="consultation-form" novalidate>
+        <label class="sr-only" for="document-type">Tipo de documento</label><select id="document-type" name="documentType"><option value="DNI">DNI</option><option value="CE">CE</option><option value="PTP/CPP">PTP/CPP</option><option value="CARNE_SOLICITANTE">CARNÉ SOLICITANTE</option><option value="TARJETA_IDENTIDAD">TARJETA DE IDENTIDAD</option></select>
+        <label class="sr-only" for="document-number">Número de documento</label><input id="document-number" name="documentNumber" inputmode="numeric" autocomplete="off" placeholder="Ingrese el documento" maxlength="15">
+        <label class="sr-only" for="license-class">Clase de licencia</label><select id="license-class" name="licenseClass"><option value="A">Clase A</option><option value="B">Clase B</option></select>
+        <div class="captcha-block"><label class="sr-only" for="captcha-answer">Texto de verificación</label><input id="captcha-answer" name="captchaAnswer" autocomplete="off" placeholder="Ingrese el texto" maxlength="6"><img id="captcha-image" width="210" height="38" alt="Código captcha"><button type="button" id="refresh-captcha" class="link-button">Refrescar Captcha</button></div>
+        <a href="/" class="link-button home-link">Ir a la página principal</a><button type="submit" class="submit-button">CONSULTAR</button>
+      </form>
+    </section></main>
+    <footer><p class="compatibility">Navegadores Compatibles: Internet Explorer (Edge), Chrome y Firefox.</p><p><strong>Telf. (01) 615-7900&nbsp;&nbsp; Correo: atencionalciudadano@mtc.gob.pe</strong></p><p>Desarrollado por la Oficina General de Tecnología de la Información OGTI - MTC - 2022</p></footer>
+  </div>
+  <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message"><header><h2 id="modal-title">consulta evaluaciones</h2><button type="button" class="close-button" aria-label="Cerrar" data-close-modal>×</button></header><div id="modal-message" class="modal-alert" role="alert"></div><div class="modal-actions"><button type="button" class="accept-button" data-close-modal>Aceptar</button></div></section></div>
+</body></html>

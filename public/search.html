@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consulta de Licencia de Conducir</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="/search.css"><script src="/search.js" defer></script>
+</head>
+<body>
+  <header class="state-bar"><div class="state-inner"><picture><source media="(max-width:520px)" srcset="/assets/portal/logo_gobpe.svg"><img src="/assets/portal/logo_gobpe_completo.svg" alt="gob.pe"></picture><span>Plataforma digital única del Estado Peruano</span></div></header>
+  <nav class="breadcrumbs" aria-label="Migas de pan"><div><a href="/">Inicio</a><b>›</b><a href="#">El estado</a><b>›</b><a href="#">MTC</a><b>›</b><span>SNC</span></div></nav>
+
+  <main>
+    <section class="driver-hero">
+      <div class="driver-wrap">
+        <h1>Consulta de Licencia de Conducir</h1>
+        <h2>Datos del conductor</h2>
+        <div class="driver-layout">
+          <div class="driver-grid">
+            <div class="data-field"><small>Apellidos</small><span id="res-last-names">SAMAME ALVAREZ</span></div>
+            <div class="data-field"><small>Nombres</small><span id="res-first-names">LUIS ALBERTO SEGUNDO</span></div>
+            <div class="data-field"><small>Tipo de documento</small><span id="res-doc-type">DNI</span></div>
+            <div class="data-field"><small>Número de documento</small><span id="res-doc-number">72218318</span></div>
+          </div>
+          <img class="license-illustration" src="/assets/portal/driving-license.png" alt="Licencia de conducir">
+        </div>
+      </div>
+    </section>
+
+    <section class="results-wrap">
+      <nav class="tabs" role="tablist" aria-label="Información del conductor">
+        <button class="tab active" role="tab" data-tab="licencias"><span class="material-icons">badge</span>Licencias</button>
+        <button class="tab" role="tab" data-tab="puntos"><span class="material-icons">bubble_chart</span>Puntos</button>
+        <button class="tab" role="tab" data-tab="record"><span class="material-icons">widgets</span>Record</button>
+        <button class="tab" role="tab" data-tab="papeletas"><span class="material-icons">receipt_long</span>Papeletas Impagas</button>
+        <button class="tab" role="tab" data-tab="tramites"><span class="material-icons">topic</span>Trámites</button>
+      </nav>
+
+      <section id="licencias" class="tab-panel active" role="tabpanel">
+        <div class="license-heading"><h2>Licencia: <span id="res-head-class">B II-C</span> - <strong id="res-head-status">Vigente</strong></h2><img id="res-veh-img" class="moto" src="/assets/portal/moto.png" alt="Vehículo"></div>
+        <div class="license-grid">
+          <div class="data-field"><small>Clase y categoría</small><span id="res-class">B II-C</span></div>
+          <div class="data-field"><small>Número de licencia</small><span id="res-license-num">B72218318</span></div>
+          <div class="data-field short"><small>Tipo de Licencia</small><span id="res-license-type">FÍSICA</span></div>
+          <div class="data-field"><small>Fecha de expedición</small><span id="res-issued-at">04/05/2022</span></div>
+          <div class="data-field"><small>Restricciones</small><span id="res-restrictions">SIN RESTRICCIONES</span></div>
+          <div class="data-field"><small>Vigente hasta</small><span id="res-expires-at">04/05/2027</span></div>
+          <div class="data-field full"><small>Centro de emisión</small><span id="res-issuer">MUNICIPALIDAD PROVINCIAL SAN IGNACIO</span></div>
+        </div>
+      </section>
+
+      <section id="puntos" class="tab-panel points-panel" role="tabpanel">
+        <article class="points-summary">
+          <h3>Puntos acumulados <span class="material-icons info-icon">info</span></h3>
+          <div class="points-total"><span class="material-icons points-symbol">bubble_chart</span><span id="res-points">0 puntos</span></div>
+        </article>
+
+        <section class="points-section">
+          <h3>Detalle de Infracciones:</h3>
+          <div class="table-scroll"><table><thead><tr><th><span class="material-icons menu-icon">menu</span></th><th>#</th><th>Entidad</th><th>Papeleta</th><th>Fecha</th><th>Fecha Firme</th></tr></thead><tbody><tr><td colspan="6">No se encontraron papeletas para el administrado</td></tr></tbody></table></div>
+          <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+        </section>
+
+        <section class="points-section">
+          <h3>Cursos de Seguridad Vial: <span class="material-icons info-icon">info</span></h3>
+          <div class="table-scroll"><table><thead><tr><th><span class="material-icons menu-icon">menu</span></th><th>#</th><th>Capacitación</th><th>Certificado</th><th>Fecha</th><th>Papeleta</th></tr></thead><tbody><tr><td colspan="6">No se encontraron cursos y/o jornadas para el administrado</td></tr></tbody></table></div>
+          <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+        </section>
+
+        <section class="points-section">
+          <h3>Reducción de Puntos: <span class="material-icons info-icon">info</span></h3>
+          <div class="table-scroll"><table><thead><tr><th>#</th><th>Fecha Bonificación</th><th>Fecha Vigencia</th><th>Disponible</th><th>Utilizado</th></tr></thead><tbody><tr><td colspan="5">No se encontraron bonificaciones para el administrado</td></tr></tbody></table></div>
+          <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+        </section>
+      </section>
+      <section id="record" class="tab-panel record-panel" role="tabpanel">
+        <h2>Record N° <span id="res-record-num">B72218318</span></h2>
+        <section class="record-section">
+          <h3>Detalle de Sanciones:</h3>
+          <div class="table-scroll"><table><thead><tr><th><span class="material-icons menu-icon">menu</span></th><th>#</th><th>Tipo de Sanción</th><th>N° de Resolución</th><th>Fecha de Resolución</th><th>Entidad</th><th>Fecha Inicio de<br>Sanción</th></tr></thead><tbody><tr><td colspan="7">No se encontraron sanciones para el administrado</td></tr></tbody></table></div>
+          <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+        </section>
+        <section class="record-section infractions-record">
+          <h3>Detalle de Infracciones:</h3>
+          <div class="table-scroll"><table><thead><tr><th>#</th><th>Papeleta</th><th>Fecha</th><th>Falta</th></tr></thead><tbody><tr><td colspan="4">No se encontraron papeletas para el administrado</td></tr></tbody></table></div>
+          <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+        </section>
+      </section>
+      <section id="papeletas" class="tab-panel tickets-panel" role="tabpanel">
+        <div class="table-scroll"><table><thead><tr><th><span class="material-icons menu-icon">menu</span></th><th>#</th><th>Entidad</th><th>Papeleta</th><th>Fecha</th><th>Fecha Firme</th><th>Falta</th><th>Resolución</th></tr></thead><tbody><tr><td colspan="8">No se encontraron papeletas para el administrado</td></tr></tbody></table></div>
+        <div class="paginator"><span>Registros por página</span><span class="page-size">8 <span class="material-icons">arrow_drop_down</span></span><span>0 de 0</span><button aria-label="Página anterior">‹</button><button aria-label="Página siguiente">›</button></div>
+      </section>
+      <section id="tramites" class="tab-panel" role="tabpanel"><h2>Trámites</h2><p>No se encontraron trámites pendientes en esta demostración local.</p></section>
+
+      <div class="socials" aria-label="Redes sociales"><img src="/assets/portal/facebook.png" alt="Facebook"><img src="/assets/portal/telegram.png" alt="Telegram"><img src="/assets/portal/twitter.png" alt="Twitter"><img src="/assets/portal/linkedin.png" alt="LinkedIn"><img src="/assets/portal/whatsapp.png" alt="WhatsApp"></div>
+    </section>
+    <button class="floating material-icons" type="button" aria-label="Más opciones">add</button>
+  </main>
+</body>
+</html>

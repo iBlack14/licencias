@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Panel de administración — Sistema de Licencias de Conducir MTC">
+  <title>MTC · Sistema Nacional de Conductores — Administración</title>
+  <link rel="icon" href="/assets/portal/logo_gobpe.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+</head>
+<body>
+
+  <!-- BARRA INSTITUCIONAL OFICIAL DEL ESTADO PERUANO -->
+  <header class="state-bar">
+    <div class="state-inner">
+      <div class="brand">
+        <picture>
+          <source media="(max-width: 520px)" srcset="/assets/portal/logo_gobpe.svg">
+          <img src="/assets/portal/logo_gobpe_completo.svg" alt="gob.pe">
+        </picture>
+        <span class="brand-sub">Plataforma digital única del Estado Peruano</span>
+      </div>
+      <div class="state-tag">
+        <span class="ministry-name">Ministerio de Transportes y Comunicaciones</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-brand-header">
+          <img src="/assets/portal/driving-license.png" alt="Licencia MTC" class="login-logo-img">
+        </div>
+      </div>
+      <div class="login-header">
+        <span class="login-badge">SISTEMA NACIONAL DE CONDUCTORES</span>
+        <h1>Panel Administrativo</h1>
+        <p>Gestión y Control de Licencias de Conducir</p>
+      </div>
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label for="login-user">Usuario Institucional</label>
+          <div class="input-wrap">
+            <span class="material-icons input-icon">person</span>
+            <input id="login-user" type="text" placeholder="Ingresa tu usuario" autocomplete="username" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Contraseña</label>
+          <div class="input-wrap">
+            <span class="material-icons input-icon">lock</span>
+            <input id="login-pass" type="password" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
+            <button type="button" class="toggle-pass" id="toggle-pass" aria-label="Mostrar contraseña">
+              <span class="material-icons">visibility</span>
+            </button>
+          </div>
+        </div>
+        <p id="login-error" class="login-error" hidden></p>
+        <button id="login-btn" type="submit" class="btn-primary btn-full">
+          <span class="material-icons">login</span>
+          Ingresar al Sistema
+        </button>
+      </form>
+      <p class="login-footer">Acceso oficial restringido · Oficina General de Tecnología de la Información MTC</p>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="dashboard" class="dashboard" hidden>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img src="/assets/portal/driving-license.png" alt="MTC" class="sidebar-logo-img">
+        <div class="brand-text">
+          <strong>MTC Conductores</strong>
+          <small>Administración Central</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-section="records" id="nav-records">
+          <span class="material-icons">badge</span>
+          <span>Licencias</span>
+        </button>
+        <button class="nav-item" data-section="stats" id="nav-stats">
+          <span class="material-icons">bar_chart</span>
+          <span>Estadísticas</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <img src="/assets/portal/usuario.png" alt="Usuario" class="user-avatar-img">
+          <div class="user-meta">
+            <span id="sidebar-user">admin</span>
+            <small class="user-role">Operador MTC</small>
+          </div>
+        </div>
+        <button class="btn-logout" id="logout-btn" title="Cerrar sesión">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menú">
+          <span class="material-icons">menu</span>
+        </button>
+        <div class="topbar-title">
+          <h2 id="page-title">Gestión de Licencias</h2>
+          <span id="record-count-badge" class="count-badge">0 registros</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-primary" id="add-record-btn">
+            <span class="material-icons">add</span>
+            Nuevo Registro
+          </button>
+        </div>
+      </header>
+
+      <!-- RECORDS SECTION -->
+      <section id="section-records" class="content-section active">
+        <div class="search-bar-wrap">
+          <div class="search-input-wrap">
+            <span class="material-icons">search</span>
+            <input id="search-input" type="text" placeholder="Buscar por DNI, nombres, apellidos o número de licencia…" autocomplete="off">
+            <button id="clear-search" class="clear-search" hidden>
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+          <div class="filter-chips">
+            <button class="chip active" data-filter="all">Todos los registros</button>
+            <button class="chip" data-filter="Vigente">Vigentes</button>
+            <button class="chip" data-filter="Suspendida">Suspendidas</button>
+            <button class="chip" data-filter="Revocada">Revocadas</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="records-table">
+            <thead>
+              <tr>
+                <th>DNI / Doc.</th>
+                <th>Apellidos y Nombres</th>
+                <th>Clase</th>
+                <th>N° Licencia</th>
+                <th>Estado</th>
+                <th>Vencimiento</th>
+                <th>Puntos</th>
+                <th class="col-actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="records-tbody">
+              <tr class="loading-row">
+                <td colspan="8">
+                  <div class="spinner-wrap"><div class="spinner"></div><span>Cargando registros del MTC…</span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <span id="table-info">Mostrando 0 registros</span>
+        </div>
+      </section>
+
+      <!-- STATS SECTION -->
+      <section id="section-stats" class="content-section">
+        <div class="stats-grid">
+          <div class="stat-card stat-blue">
+            <div class="stat-asset-wrap">
+              <img src="/assets/portal/driving-license.png" alt="Total" class="stat-img">
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-total">0</span>
+              <span class="stat-label">Total Licencias Registradas</span>
+            </div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-asset-wrap">
+              <img src="/assets/portal/id-card.png" alt="Vigentes" class="stat-img">
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-vigente">0</span>
+              <span class="stat-label">Licencias Vigentes</span>
+            </div>
+          </div>
+          <div class="stat-card stat-orange">
+            <div class="stat-asset-wrap">
+              <img src="/assets/portal/score.png" alt="Suspendidas" class="stat-img">
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-suspendida">0</span>
+              <span class="stat-label">Licencias Suspendidas</span>
+            </div>
+          </div>
+          <div class="stat-card stat-red">
+            <div class="stat-asset-wrap">
+              <img src="/assets/portal/rules.png" alt="Revocadas" class="stat-img">
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-revocada">0</span>
+              <span class="stat-label">Licencias Revocadas</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-placeholder">
+          <span class="material-icons">bar_chart</span>
+          <p>Distribución por clase de licencia en el sistema</p>
+          <div class="bar-chart" id="bar-chart"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT RECORD -->
+  <div id="record-modal" class="modal-overlay" hidden>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h3 id="modal-title">Nuevo Registro de Licencia</h3>
+        <button class="modal-close" id="modal-close" aria-label="Cerrar">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form id="record-form" novalidate>
+        <div class="modal-body">
+          <div class="form-section-title">
+            <img src="/assets/portal/id-card.png" alt="" class="modal-section-icon">
+            <span>Datos del Conductor</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="f-docType">Tipo de documento</label>
+              <select id="f-docType" name="documentType">
+                <option value="DNI">DNI - Documento Nacional de Identidad</option>
+                <option value="CE">CE - Carné de Extranjería</option>
+                <option value="PAS">PAS - Pasaporte</option>
+                <option value="PTP">PTP/CPP - Permiso Temporal de Permanencia</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-docNum">Número de documento</label>
+              <input id="f-docNum" name="documentNumber" type="text" placeholder="Ej: 72218318" maxlength="15" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="f-lastNames">Apellidos completos</label>
+              <input id="f-lastNames" name="lastNames" type="text" placeholder="Apellidos completos" maxlength="120" required>
+            </div>
+            <div class="form-group">
+              <label for="f-firstNames">Nombres completos</label>
+              <input id="f-firstNames" name="firstNames" type="text" placeholder="Nombres completos" maxlength="120" required>
+            </div>
+          </div>
+
+          <div class="form-section-title">
+            <img src="/assets/portal/driving-license.png" alt="" class="modal-section-icon">
+            <span>Datos de la Licencia de Conducir</span>
+          </div>
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="f-licenseClass">Clase y categoría</label>
+              <select id="f-licenseClass" name="licenseClass">
+                <option value="A-I">A-I</option>
+                <option value="A-IIa">A-IIa</option>
+                <option value="A-IIb">A-IIb</option>
+                <option value="A-IIIa">A-IIIa</option>
+                <option value="A-IIIb">A-IIIb</option>
+                <option value="A-IIIc">A-IIIc</option>
+                <option value="B II-C" selected>B II-C</option>
+                <option value="B II-B">B II-B</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-licenseNum">Número de licencia</label>
+              <input id="f-licenseNum" name="licenseNumber" type="text" placeholder="Ej: B72218318" maxlength="30" required>
+            </div>
+            <div class="form-group">
+              <label for="f-licenseType">Tipo de emisión</label>
+              <select id="f-licenseType" name="licenseType">
+                <option value="FISICA">FISICA</option>
+                <option value="DIGITAL">DIGITAL</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="f-status">Estado de vigencia</label>
+              <select id="f-status" name="status">
+                <option value="Vigente">Vigente</option>
+                <option value="Suspendida">Suspendida</option>
+                <option value="Revocada">Revocada</option>
+                <option value="Vencida">Vencida</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-issuedAt">Fecha de expedición</label>
+              <input id="f-issuedAt" name="issuedAt" type="text" placeholder="DD/MM/AAAA" maxlength="10">
+            </div>
+            <div class="form-group">
+              <label for="f-expiresAt">Vigente hasta</label>
+              <input id="f-expiresAt" name="expiresAt" type="text" placeholder="DD/MM/AAAA" maxlength="10">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="f-issuer">Centro de emisión / Municipalidad</label>
+              <input id="f-issuer" name="issuer" type="text" placeholder="Ej: MUNICIPALIDAD PROVINCIAL SAN IGNACIO" maxlength="180">
+            </div>
+            <div class="form-group form-group-sm">
+              <label for="f-points">Puntos acumulados</label>
+              <input id="f-points" name="points" type="number" placeholder="0" min="0" max="100" value="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="f-restrictions">Restricciones</label>
+            <input id="f-restrictions" name="restrictions" type="text" placeholder="SIN RESTRICCIONES" maxlength="120" value="SIN RESTRICCIONES">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <p id="form-error" class="form-error" hidden></p>
+          <button type="button" class="btn-secondary" id="cancel-btn">Cancelar</button>
+          <button type="submit" class="btn-primary" id="save-btn">
+            <span class="material-icons">save</span>
+            Guardar registro
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM DELETE -->
+  <div id="delete-modal" class="modal-overlay" hidden>
+    <div class="modal-backdrop" id="delete-backdrop"></div>
+    <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+      <div class="modal-header modal-header-danger">
+        <span class="material-icons">delete_forever</span>
+        <h3 id="delete-title">Eliminar registro</h3>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de eliminar del sistema el registro de <strong id="delete-name"></strong>?</p>
+        <p class="delete-warn">Esta acción no se puede deshacer y quedará registrada en auditoría.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="delete-cancel">Cancelar</button>
+        <button type="button" class="btn-danger" id="delete-confirm">
+          <span class="material-icons">delete</span>
+          Confirmar eliminación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+</body>
+</html>

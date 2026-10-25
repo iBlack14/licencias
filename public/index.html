@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Portal Único del Conductor">
+  <title>Portal Único del Conductor</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/portal.css">
+  <script src="/portal.js" defer></script>
+</head>
+<body>
+  <header class="state-bar">
+    <div class="state-inner"><div class="brand"><picture><source media="(max-width: 520px)" srcset="/assets/portal/logo_gobpe.svg"><img src="/assets/portal/logo_gobpe_completo.svg" alt="gob.pe"></picture><span>Plataforma digital única del Estado Peruano</span></div></div>
+  </header>
+  <nav class="breadcrumbs" aria-label="Migas de pan">
+    <div class="breadcrumbs-inner"><a href="#">Inicio</a><span>›</span><a href="#">El estado</a><span>›</span><a href="#">MTC</a><span>›</span><span>SNC</span></div>
+  </nav>
+
+  <main>
+    <section class="panel search-panel" aria-labelledby="search-title">
+      <h1 id="search-title">Consulta de Licencias de Conducir</h1>
+      <p class="intro">Ingrese su número de documento para ver el estado de su licencia de conducir, puntos,<br class="desktop"> bonificaciones de puntos, récord del conductor, papeletas impagas y los últimos trámites<br class="desktop"> realizados</p>
+      <form id="license-search" novalidate>
+        <label class="switch-line"><input id="advanced" type="checkbox"><span class="switch" aria-hidden="true"></span>Búsqueda avanzada</label>
+        <div class="search-fields">
+          <div id="advanced-document" class="advanced-document" hidden>
+            <button id="document-type-trigger" class="document-type-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="document-type-label">Tipo de documento de identidad</span>
+              <span id="document-type-value">DOCUMENTO NACIONAL DE IDENTIDAD</span>
+            </button>
+            <div id="document-type-menu" class="document-type-menu" role="listbox" aria-label="Tipo de documento" hidden>
+              <button type="button" role="option" aria-selected="true">DOCUMENTO NACIONAL DE IDENTIDAD</button>
+              <button type="button" role="option" aria-selected="false">CARNÉ DE EXTRANJERÍA</button>
+              <button type="button" role="option" aria-selected="false">CARNÉ DE SOLICITANTE DE REFUGIO</button>
+              <button type="button" role="option" aria-selected="false">PASAPORTE</button>
+              <button type="button" role="option" aria-selected="false">TARJETA DE IDENTIDAD</button>
+              <button type="button" role="option" aria-selected="false">PTP/CPP</button>
+            </div>
+          </div>
+          <div class="field-wrap"><input id="identity" aria-label="Documento de identidad" placeholder="Documento de identidad" autocomplete="off"><button type="button" class="mic" aria-label="Dictado por voz"><img src="/assets/portal/mic.svg" alt=""></button></div>
+        </div>
+        <label class="robot"><input id="robot" type="checkbox"> <span>No soy un robot</span></label>
+        <p class="privacy">Aceptas el tratamiento de tus datos personales y haber leído la <a href="#" data-demo>política de privacidad</a></p>
+        <label class="accept"><input id="accept" type="checkbox"> Sí, acepto</label>
+        <button class="search-button" type="submit"><img src="/assets/portal/search.svg" alt="" aria-hidden="true">Buscar</button>
+      </form>
+    </section>
+
+    <section class="panel services" aria-labelledby="services-title">
+      <h2 id="services-title">Otros servicios digitales</h2>
+      <div class="service-grid">
+        <button class="service-card" data-demo><span>Obtenga su licencia de<br>conducir Clase A</span><img src="/assets/portal/driving-license.png" alt="" aria-hidden="true"></button>
+        <button class="service-card" data-demo><span>Consulta licencia de conducir<br>Clase B en proceso de<br>migración</span><img src="/assets/portal/moto.png" alt="" aria-hidden="true"></button>
+        <a class="service-card" href="/evaluaciones.html"><span>Consulta de evaluaciones<br>para el trámite de licencia de<br>conducir de Clase A y B</span><img src="/assets/portal/icono_consulta_evaluaciones.png" alt="" aria-hidden="true"></a>
+        <button class="service-card" data-demo><span>Consulta de exoneración del<br>examen de conocimiento de<br>normas de tránsito</span><img src="/assets/portal/test.png" alt="" aria-hidden="true"></button>
+        <button class="service-card" data-demo><span>Entidades complementarias<br>acreditadas</span><img src="/assets/portal/enterprise.png" alt="" aria-hidden="true"></button>
+      </div>
+    </section>
+  </main>
+
+  <div id="visual-captcha" class="captcha-modal" hidden>
+    <div class="captcha-backdrop"></div>
+    <section class="captcha-card" role="dialog" aria-modal="true" aria-labelledby="captcha-title">
+      <div class="captcha-box">
+        <h2 id="captcha-title">Selecciona la imagen de <strong id="captcha-target"></strong></h2>
+        <div id="captcha-grid" class="captcha-grid" aria-label="Opciones del desafío visual"></div>
+        <p id="captcha-feedback" class="captcha-feedback" aria-live="polite"></p>
+        <div class="captcha-actions"><button id="captcha-close" type="button" class="captcha-verify">Cerrar</button></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="notice" class="notice" hidden>
+    <div class="notice-backdrop" data-close></div>
+    <section role="dialog" aria-modal="true" aria-labelledby="notice-title" class="notice-card">
+      <button class="notice-close" type="button" aria-label="Cerrar" data-close>×</button>
+      <h2 id="notice-title">Aviso</h2>
+      <p id="notice-message"></p>
+      <button class="notice-ok" type="button" data-close>Aceptar</button>
+    </section>
+  </div>
+
+  <div id="not-found" class="not-found-modal" hidden>
+    <div class="not-found-backdrop" data-not-found-close></div>
+    <section class="not-found-card" role="dialog" aria-modal="true" aria-labelledby="not-found-title" aria-describedby="not-found-message">
+      <span class="material-icons not-found-icon" aria-hidden="true">info_outline</span>
+      <h2 id="not-found-title">Portal Único del Conductor</h2>
+      <p id="not-found-message">¡No se encontró información de persona natural!!</p>
+      <button id="not-found-ok" type="button" data-not-found-close>OK</button>
+    </section>
+  </div>
+</body>
+</html>

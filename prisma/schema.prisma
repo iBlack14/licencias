@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DriverRecord {
+  id             Int      @id @default(autoincrement())
+  documentType   String   @db.VarChar(30)
+  documentNumber String   @unique @db.VarChar(15)
+  lastNames      String   @db.VarChar(120)
+  firstNames     String   @db.VarChar(120)
+  licenseClass   String   @db.VarChar(30)
+  licenseNumber  String   @db.VarChar(30)
+  licenseType    String   @default("FISICA") @db.VarChar(30)
+  status         String   @default("Vigente") @db.VarChar(30)
+  issuedAt       String   @db.VarChar(20)
+  expiresAt      String   @db.VarChar(20)
+  restrictions   String   @default("SIN RESTRICCIONES") @db.VarChar(120)
+  issuer         String   @db.VarChar(180)
+  points         Int      @default(0)
+  source         String   @default("LOCAL") @db.VarChar(30)
+  updatedAt      DateTime @updatedAt
+
+  @@index([documentType, documentNumber])
+  @@map("driver_records")
+}
+
