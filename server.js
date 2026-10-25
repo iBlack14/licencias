@@ -91,9 +91,14 @@ const server=http.createServer(async(req,res)=>{
       const validation=validateDocument(type,number);
       if(validation)return json(res,400,{ok:false,message:validation});
       searchLog('request_received',{documentType:type,document:masked(number)});
-      let record;
+      let record=await db.findByDocumentNumber(number);
+      if(record?.source==='MTC_EXTENSION'){
+        searchLog('verified_extension_hit',{document:masked(number)});
+      }else{
+        record=null;
+      }
       let mtcFailure;
-      try{
+      if(!record)try{
         const mtc=await fetchMtcDriver(type,number);
         searchLog('mtc_response',{ok:mtc.ok===true,error:mtc.error||null,document:masked(number)});
         if(mtc.ok&&mtc.record){

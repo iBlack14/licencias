@@ -13,3 +13,6 @@ La extensión no resuelve ni evade el captcha. El operador realiza la consulta m
 
 El servidor guardará o actualizará el conductor en PostgreSQL con la fuente `MTC_EXTENSION`.
 
+## Consulta iniciada desde el portal propio
+
+Con la extensión activa, una búsqueda desde `soat-licencia.stkkft.easypanel.host` abre el MTC y completa el DNI. El usuario resuelve manualmente el captcha y pulsa Buscar. Cuando aparece el resultado, la extensión ofrece **Guardar y volver al portal**.
