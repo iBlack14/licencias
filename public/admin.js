@@ -256,21 +256,10 @@ const formError   = $('form-error');
 
 function openAddModal() {
   editingDoc = null;
-  $('modal-title').textContent = 'Nuevo Registro de Licencia y Evaluaciones';
+  $('modal-title').textContent = 'Nueva Licencia';
   recordForm.reset();
   $('f-restrictions').value = 'SIN RESTRICCIONES';
   $('f-points').value = '0';
-  $('f-tramite').value = 'REVALIDACIÓN';
-  $('f-evalCat').value = 'A I';
-  $('f-medCentro').value = 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.';
-  $('f-medFecha').value = '16/10/2026';
-  $('f-medVence').value = '16/04/2027';
-  $('f-conCentro').value = 'TOURING Y AUTOMOVIL CLUB DEL PERU';
-  $('f-conFecha').value = '16/10/2026';
-  $('f-conVence').value = '16/04/2027';
-  $('f-habCentro').value = 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
-  $('f-habFecha').value = '16/10/2026';
-  $('f-habVence').value = '16/04/2027';
   formError.hidden = true;
   resetModalPosition(recordModal);
   recordModal.hidden = false;
@@ -281,7 +270,7 @@ function openEditModal(docNumber) {
   const rec = allRecords.find(r => r.documentNumber === docNumber);
   if (!rec) return;
   editingDoc = docNumber;
-  $('modal-title').textContent = 'Editar Registro de Licencia y Evaluaciones';
+  $('modal-title').textContent = 'Editar Licencia';
   formError.hidden = true;
 
   // Populate base
@@ -299,19 +288,6 @@ function openEditModal(docNumber) {
   $('f-points').value       = rec.points ?? 0;
   $('f-restrictions').value = rec.restrictions   || 'SIN RESTRICCIONES';
 
-  // Populate evaluaciones
-  const ev = rec.evaluations || {};
-  $('f-tramite').value    = ev.tramite || 'REVALIDACIÓN';
-  $('f-evalCat').value    = ev.evalCategoria || rec.licenseClass || 'A I';
-  $('f-medCentro').value  = ev.medCentro || rec.issuer || 'SERVICIOS MEDICOS VIRGEN DE LA PUERTA E.I.R.L.';
-  $('f-medFecha').value   = ev.medFecha || rec.issuedAt || '16/10/2026';
-  $('f-medVence').value   = ev.medVence || rec.expiresAt || '16/04/2027';
-  $('f-conCentro').value  = ev.conCentro || rec.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
-  $('f-conFecha').value   = ev.conFecha || rec.issuedAt || '16/10/2026';
-  $('f-conVence').value   = ev.conVence || rec.expiresAt || '16/04/2027';
-  $('f-habCentro').value  = ev.habCentro || rec.issuer || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
-  $('f-habFecha').value   = ev.habFecha || rec.issuedAt || '16/10/2026';
-  $('f-habVence').value   = ev.habVence || rec.expiresAt || '16/04/2027';
 
   resetModalPosition(recordModal);
   recordModal.hidden = false;
@@ -349,18 +325,7 @@ recordForm.addEventListener('submit', async e => {
     issuer:         $('f-issuer').value.trim().toUpperCase(),
     points:         Number($('f-points').value) || 0,
     restrictions:   $('f-restrictions').value.trim().toUpperCase() || 'SIN RESTRICCIONES',
-    // Evaluaciones
-    tramite:        $('f-tramite').value.trim().toUpperCase(),
-    evalCategoria:  $('f-evalCat').value.trim().toUpperCase() || $('f-licenseClass').value,
-    medCentro:      $('f-medCentro').value.trim().toUpperCase(),
-    medFecha:       $('f-medFecha').value.trim(),
-    medVence:       $('f-medVence').value.trim(),
-    conCentro:      $('f-conCentro').value.trim().toUpperCase(),
-    conFecha:       $('f-conFecha').value.trim(),
-    conVence:       $('f-conVence').value.trim(),
-    habCentro:      $('f-habCentro').value.trim().toUpperCase(),
-    habFecha:       $('f-habFecha').value.trim(),
-    habVence:       $('f-habVence').value.trim()
+    ...(editingDoc ? (allRecords.find(r => r.documentNumber === editingDoc)?.evaluations || {}) : {})
   };
 
   let result;
@@ -371,12 +336,12 @@ recordForm.addEventListener('submit', async e => {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '<span class="material-icons">save</span> Guardar registro y evaluaciones';
+  btn.innerHTML = '<span class="material-icons">save</span> Guardar licencia';
 
   if (result.ok) {
     closeRecordModal();
     await loadRecords();
-    toast(editingDoc ? 'Registro y evaluaciones actualizados correctamente' : 'Registro y evaluaciones creados correctamente', 'success');
+    toast(editingDoc ? 'Licencia actualizada correctamente' : 'Licencia creada correctamente', 'success');
     if ($('section-stats').classList.contains('active')) renderStats();
   } else {
     formError.textContent = result.data.message || 'Error al guardar.';
@@ -620,6 +585,7 @@ knowledgeForm.addEventListener('submit', async e => {
    EXAMEN DE CONDUCCIÓN
    —————————————————————————————— */
 let ecdSearchTerm = '';
+let drivingEditingDoc = null;
 
 function renderExamConduccion() {
   const tbody = $('ecd-tbody');
@@ -669,7 +635,7 @@ function renderExamConduccion() {
 
   tbody.querySelectorAll('.action-btn.edit').forEach(btn => {
     btn.addEventListener('click', () => {
-      openEditModal(btn.dataset.doc);
+      openDrivingModal(btn.dataset.doc);
     });
   });
 }
@@ -680,7 +646,89 @@ $('ecd-search').addEventListener('input', e => {
 });
 
 $('ecd-add-btn').addEventListener('click', () => {
-  openAddModal();
+  openDrivingModal();
+});
+
+const drivingModal = $('driving-modal');
+const drivingForm = $('driving-form');
+const drivingError = $('driving-error');
+
+function openDrivingModal(docNumber = null) {
+  const rec = docNumber ? allRecords.find(r => r.documentNumber === docNumber) : null;
+  const ev = rec?.evaluations || {};
+  drivingEditingDoc = rec?.documentNumber || null;
+  drivingForm.reset();
+  drivingError.hidden = true;
+  $('driving-title').textContent = rec ? 'Editar Examen de Conducción' : 'Nuevo Examen de Conducción';
+  $('d-docType').value = rec?.documentType || 'DNI';
+  $('d-docNum').value = rec?.documentNumber || '';
+  $('d-firstNames').value = rec?.firstNames || '';
+  $('d-lastNames').value = rec?.lastNames || '';
+  $('d-tramite').value = ev.tramite || 'REVALIDACIÓN';
+  $('d-category').value = ev.evalCategoria || rec?.licenseClass || 'A I';
+  $('d-center').value = ev.habCentro || 'CIRCUITO OFICIAL DE EVALUACIÓN DE MANEJO';
+  $('d-date').value = ev.habFecha || '';
+  $('d-expiry').value = ev.habVence || '';
+  resetModalPosition(drivingModal);
+  drivingModal.hidden = false;
+  $('d-docNum').focus();
+}
+
+function closeDrivingModal() {
+  drivingModal.hidden = true;
+  drivingEditingDoc = null;
+  resetModalPosition(drivingModal);
+}
+
+$('driving-close').addEventListener('click', closeDrivingModal);
+$('driving-cancel').addEventListener('click', closeDrivingModal);
+$('driving-backdrop').addEventListener('click', closeDrivingModal);
+
+drivingForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  drivingError.hidden = true;
+  if (!drivingForm.checkValidity()) {
+    drivingForm.reportValidity();
+    return;
+  }
+  const existing = drivingEditingDoc
+    ? allRecords.find(r => r.documentNumber === drivingEditingDoc)
+    : null;
+  const ev = existing?.evaluations || {};
+  const documentNumber = $('d-docNum').value.trim().toUpperCase();
+  const category = $('d-category').value.trim().toUpperCase();
+  const body = {
+    ...(existing || {}),
+    ...ev,
+    documentType: $('d-docType').value,
+    documentNumber,
+    firstNames: $('d-firstNames').value.trim().toUpperCase(),
+    lastNames: $('d-lastNames').value.trim().toUpperCase(),
+    licenseClass: existing?.licenseClass || category,
+    licenseNumber: existing?.licenseNumber || `PENDIENTE-${documentNumber}`,
+    tramite: $('d-tramite').value,
+    evalCategoria: category,
+    habCentro: $('d-center').value.trim().toUpperCase(),
+    habFecha: $('d-date').value.trim(),
+    habVence: $('d-expiry').value.trim()
+  };
+  const btn = $('driving-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#fff;width:14px;height:14px;border-width:2px"></span> Guardando…';
+  const result = drivingEditingDoc
+    ? await apiFetch(`/api/admin/records/${encodeURIComponent(drivingEditingDoc)}`, { method: 'PUT', body })
+    : await apiFetch('/api/admin/records', { method: 'POST', body });
+  btn.disabled = false;
+  btn.innerHTML = '<span class="material-icons">save</span> Guardar examen';
+  if (!result.ok) {
+    drivingError.textContent = result.data.message || 'No se pudo guardar el examen.';
+    drivingError.hidden = false;
+    return;
+  }
+  const wasEditing = Boolean(drivingEditingDoc);
+  closeDrivingModal();
+  await loadRecords();
+  toast(wasEditing ? 'Examen de conducción actualizado' : 'Examen de conducción registrado', 'success');
 });
 
 /* ——————————————————————————————
@@ -690,6 +738,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!recordModal.hidden) closeRecordModal();
     if (!knowledgeModal.hidden) closeKnowledgeModal();
+    if (!drivingModal.hidden) closeDrivingModal();
     if (!deleteModal.hidden) closeDeleteModal();
   }
   // Ctrl+N = new record (when dashboard is visible)
@@ -770,4 +819,5 @@ function makeModalDraggable(modalOverlay) {
 // Inicializar modales arrastrables
 makeModalDraggable(recordModal);
 makeModalDraggable(knowledgeModal);
+makeModalDraggable(drivingModal);
 makeModalDraggable(deleteModal);
