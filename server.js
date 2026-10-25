@@ -66,22 +66,28 @@ const server=http.createServer(async(req,res)=>{
       const validation=validateDocument(type,number);
       if(validation)return json(res,400,{ok:false,message:validation});
       searchLog('request_received',{documentType:type,document:masked(number)});
-      let record=await db.findRecord(type,number);
-      searchLog(record?'database_hit':'database_miss',{document:masked(number)});
-      if(!record){
-        try{
-          const mtc=await fetchMtcDriver(type,number);
-          searchLog('mtc_response',{ok:mtc.ok===true,error:mtc.error||null,document:masked(number)});
-          if(mtc.ok&&mtc.record){
-            record=normalizeRecord(mtc.record);
-            record=await db.upsertRecord(record);
-          }else if(mtc.error==='rate_limited'){
-            return json(res,429,{ok:false,message:mtc.message});
-          }else if(mtc.error==='error'||mtc.error==='blocked'){
-            return json(res,503,{ok:false,message:mtc.message});
-          }
-        }catch(e){searchLog('unexpected_error',{name:e.name,message:e.message,document:masked(number)})}
+      let record;
+      let mtcFailure;
+      try{
+        const mtc=await fetchMtcDriver(type,number);
+        searchLog('mtc_response',{ok:mtc.ok===true,error:mtc.error||null,document:masked(number)});
+        if(mtc.ok&&mtc.record){
+          record=normalizeRecord(mtc.record);
+          record=await db.upsertRecord(record);
+        }else{
+          mtcFailure=mtc;
+        }
+      }catch(e){
+        mtcFailure={error:'error',message:'No se pudo completar la consulta externa.'};
+        searchLog('unexpected_error',{name:e.name,message:e.message,document:masked(number)});
       }
+      if(!record){
+        searchLog('database_fallback_started',{document:masked(number)});
+        record=await db.findRecord(type,number);
+        searchLog(record?'database_fallback_hit':'database_fallback_miss',{document:masked(number)});
+      }
+      if(!record&&mtcFailure?.error==='rate_limited')return json(res,429,{ok:false,message:mtcFailure.message});
+      if(!record&&(mtcFailure?.error==='error'||mtcFailure?.error==='blocked'))return json(res,503,{ok:false,message:mtcFailure.message});
       if(!record)return json(res,404,{ok:false,message:'¡No se encontró información de persona natural!!'});
       const id=crypto.randomUUID();
       queryResults.set(id,{record,expires:Date.now()+5*60*1000});
