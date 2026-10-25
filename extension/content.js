@@ -1,3 +1,6 @@
+if (!globalThis.__mtcLicenciasContentLoaded) {
+globalThis.__mtcLicenciasContentLoaded = true;
+
 function valueFor(map, ...labels) {
   for (const label of labels) {
     if (map[label]) return map[label];
@@ -54,6 +57,14 @@ function installPortalBridge() {
       }
     });
   });
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (event.source !== window || message?.source !== 'mtc-portal' || message?.type !== 'OPEN_MTC_LOOKUP') return;
+    chrome.runtime.sendMessage({ type: 'OPEN_MTC_LOOKUP', lookup: message.lookup }, response => {
+      window.postMessage({ source: 'mtc-extension', type: 'OPEN_MTC_RESULT', requestId: message.requestId, ok: Boolean(response?.ok) }, location.origin);
+    });
+  });
+  window.postMessage({ source: 'mtc-extension', type: 'READY' }, location.origin);
 }
 
 function showAssistant(message, action) {
@@ -127,3 +138,4 @@ async function installMtcAssistant() {
 
 if (location.hostname === 'soat-licencia.stkkft.easypanel.host') installPortalBridge();
 if (location.hostname === 'licencias.mtc.gob.pe') installMtcAssistant();
+}

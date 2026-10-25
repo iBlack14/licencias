@@ -35,3 +35,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 });
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'complete' || !tab.url) return;
+  if (!tab.url.startsWith('https://soat-licencia.stkkft.easypanel.host/') &&
+      !tab.url.startsWith('https://licencias.mtc.gob.pe/')) return;
+  chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }).catch(() => {});
+});
