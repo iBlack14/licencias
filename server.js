@@ -30,7 +30,7 @@ const EXTENSION_API_TOKEN = process.env.EXTENSION_API_TOKEN || '';
 const sessions = new Map();
 const queryResults = new Map();
 
-const mimeTypes = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.json':'application/json; charset=utf-8','.ttf':'font/ttf'};
+const mimeTypes = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml; charset=utf-8','.jpg':'image/jpeg','.png':'image/png','.ico':'image/x-icon','.json':'application/json; charset=utf-8','.ttf':'font/ttf'};
 const securityHeaders = {'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Permissions-Policy':'camera=(), geolocation=()','Content-Security-Policy':"default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; script-src 'self'; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"};
 
 function json(res,status,body,extra={}){res.writeHead(status,{...securityHeaders,'Content-Type':mimeTypes['.json'],'Cache-Control':'no-store, private',...extra});res.end(JSON.stringify(body))}
