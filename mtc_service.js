@@ -49,6 +49,11 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
 
     await page.goto('https://licencias.mtc.gob.pe/#/index', { timeout: 15000, waitUntil: 'domcontentloaded' });
     log('portal_loaded', { url: page.url() });
+    const portalTitle = await page.title();
+    if (/Attention Required|Cloudflare/i.test(portalTitle)) {
+      log('portal_blocked', { title: portalTitle });
+      return { ok: false, error: 'blocked', message: 'La consulta externa no está disponible desde este servidor. Inténtelo nuevamente más tarde.' };
+    }
 
     if (docType !== 'DNI') {
       const advToggle = await page.$('#mat-slide-toggle-1-input, .mat-slide-toggle-input');
