@@ -2,6 +2,8 @@
   if (window.__mtcJsonMonitorInstalled) return;
   window.__mtcJsonMonitorInstalled = true;
 
+  const originalJsonParse = JSON.parse;
+
   const emit = (entry) => {
     window.postMessage({
       source: 'mtc-json-monitor',
@@ -13,7 +15,29 @@
   const parseJson = (text, contentType = '') => {
     const value = String(text || '').trim();
     if (!value || (!/json/i.test(contentType) && !/^[\[{]/.test(value))) return null;
-    try { return JSON.parse(value); } catch { return null; }
+    try { return originalJsonParse(value); } catch { return null; }
+  };
+
+  // El API del MTC devuelve encryptedData. Su propia aplicación lo descifra y
+  // luego normalmente ejecuta JSON.parse. Capturamos ese resultado ya legible,
+  // sin alterar el cifrado, las llaves ni el objeto que recibe Angular.
+  JSON.parse = function (text, reviver) {
+    const result = originalJsonParse.call(this, text, reviver);
+    try {
+      const value = String(text || '').trim();
+      const isObject = result && typeof result === 'object';
+      const isProbablyUseful = value.length >= 20 && /^[\[{]/.test(value);
+      if (isObject && isProbablyUseful) {
+        emit({
+          transport: 'json.parse',
+          method: 'DECRYPTED',
+          url: location.href,
+          status: 200,
+          data: result
+        });
+      }
+    } catch (_) {}
+    return result;
   };
 
   const originalFetch = window.fetch;

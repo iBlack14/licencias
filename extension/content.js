@@ -2,6 +2,16 @@ if (!globalThis.__mtcLicenciasContentLoaded) {
 globalThis.__mtcLicenciasContentLoaded = true;
 
 const capturedJson = [];
+let refreshAssistantFromJson = null;
+
+function isCaptureNoise(entry) {
+  const data = entry?.data;
+  if (!data || typeof data !== 'object') return true;
+  if (data.encryptedKey || data.encryptedData) return true;
+  if (data.token && data.version && data.spa) return true;
+  if (data.Token && data.Data == null && !data.Message) return true;
+  return false;
+}
 
 function formatCapturedJson() {
   return JSON.stringify(capturedJson, null, 2);
@@ -16,11 +26,13 @@ if (location.hostname === 'licencias.mtc.gob.pe') {
   window.addEventListener('message', event => {
     const message = event.data;
     if (event.source !== window || message?.source !== 'mtc-json-monitor' || message?.type !== 'JSON_RESPONSE') return;
+    if (isCaptureNoise(message.entry)) return;
     capturedJson.push(message.entry);
     if (capturedJson.length > 50) capturedJson.shift();
     chrome.storage.local.set({ mtcJsonCaptures: capturedJson }).catch(() => {});
     console.info('[MTC → Licencias] Respuesta JSON capturada:', message.entry);
     updateCaptureCounter();
+    refreshAssistantFromJson?.();
   });
 }
 
@@ -31,7 +43,47 @@ function valueFor(map, ...labels) {
   return '';
 }
 
+function cleanDate(value) {
+  return String(value || '').split(' ')[0];
+}
+
+function extractRecordFromJson() {
+  const payloads = capturedJson
+    .filter(entry => entry.transport === 'json.parse' && entry.method === 'DECRYPTED')
+    .map(entry => entry.data);
+  const general = [...payloads].reverse().find(payload => payload?.IsSuccess && payload?.Data?.Administrados?.length);
+  const score = [...payloads].reverse().find(payload => payload?.IsSuccess && payload?.Data?.Administrado?.var_numdocumento);
+  if (!general) return null;
+
+  const data = general.Data;
+  const person = data.Administrados[0];
+  const license = data.LicenciaA || data.LicenciaB || {};
+  const scorePerson = score?.Data?.Administrado || {};
+  const restrictions = [license.Restriccion1 || person.Restricciones1, license.Restriccion2 || person.Restricciones2]
+    .filter(Boolean)
+    .join(' - ');
+
+  return {
+    documentType: person.NomTipoDoc || scorePerson.var_tipodocumento || 'DNI',
+    documentNumber: person.NumDocumento || scorePerson.var_numdocumento || '',
+    lastNames: [person.ApellidoPaterno, person.ApellidoMaterno].filter(Boolean).join(' ').trim(),
+    firstNames: String(person.Nombre || '').trim(),
+    licenseClass: license.Categoria || person.Categoria || scorePerson.clase_categoria || '',
+    licenseNumber: license.NroLicencia || person.NumLicencia || scorePerson.num_licencia || '',
+    licenseType: Number(license.LicenciaElectronica) === 1 ? 'ELECTRONICA' : 'FISICA',
+    status: license.Estado || person.EstadoLicencia || scorePerson.estado || 'Vigente',
+    issuedAt: cleanDate(license.FechaExpedicion || person.FechaExpedicion || scorePerson.fechaexpedicion),
+    expiresAt: cleanDate(license.FechaRevalidacion || person.FechaRevalidacion || scorePerson.fecharevalidacion),
+    restrictions: restrictions || 'SIN RESTRICCIONES',
+    issuer: license.CentroEmision || 'MTC',
+    points: Number(scorePerson.PtsAcumulados || 0)
+  };
+}
+
 function extractRecord() {
+  const jsonRecord = extractRecordFromJson();
+  if (jsonRecord) return { ok: true, record: jsonRecord, source: 'decrypted_json' };
+
   const map = {};
   document.querySelectorAll('mat-form-field').forEach(field => {
     const label = field.querySelector('mat-label')?.textContent?.trim();
@@ -156,7 +208,9 @@ function showJsonViewer() {
 
 async function installMtcAssistant() {
   const saved = await chrome.storage.local.get('mtcJsonCaptures');
-  if (Array.isArray(saved.mtcJsonCaptures)) capturedJson.push(...saved.mtcJsonCaptures.slice(-50));
+  if (Array.isArray(saved.mtcJsonCaptures)) {
+    capturedJson.push(...saved.mtcJsonCaptures.filter(entry => !isCaptureNoise(entry)).slice(-50));
+  }
   const { pendingLookup } = await chrome.storage.local.get('pendingLookup');
   if (!pendingLookup?.documentNumber) return;
 
@@ -191,6 +245,8 @@ async function installMtcAssistant() {
     });
     return true;
   };
+
+  refreshAssistantFromJson = offerSave;
 
   if (!offerSave()) {
     showAssistant('DNI preparado. Completa el captcha, acepta los términos y pulsa Buscar. La extensión detectará el resultado.');
