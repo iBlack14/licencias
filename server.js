@@ -27,6 +27,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || crypto.randomBytes(32).toString('hex');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Cambiar123!';
+const EXTENSION_API_TOKEN = process.env.EXTENSION_API_TOKEN || '';
 const sessions = new Map();
 const queryResults = new Map();
 
@@ -51,6 +52,17 @@ const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
   try{
     if(req.method==='GET'&&url.pathname==='/api/captcha')return json(res,200,makeCaptcha());
+    if(req.method==='POST'&&url.pathname==='/api/integrations/mtc-record'){
+      const authorization=String(req.headers.authorization||'');
+      const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'});
+      const record=normalizeRecord({...await readBody(req),source:'MTC_EXTENSION'});
+      const error=validateRecord(record);
+      if(error)return json(res,400,{ok:false,message:error});
+      const saved=await db.upsertRecord(record);
+      searchLog('extension_record_saved',{documentType:saved.documentType,document:masked(saved.documentNumber)});
+      return json(res,200,{ok:true,record:saved});
+    }
     if(req.method==='POST'&&url.pathname==='/api/admin/login'){const body=await readBody(req);if(!safeEqual(body.username,ADMIN_USER)||!safeEqual(body.password,ADMIN_PASSWORD))return json(res,401,{ok:false,message:'Credenciales incorrectas.'});const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})}
     if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const id=cookies(req).admin_session;sessions.delete(id);return json(res,200,{ok:true},{'Set-Cookie':'admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})}
     if(url.pathname.startsWith('/api/admin/')&&!adminSession(req))return json(res,401,{ok:false,message:'Sesión administrativa requerida.'});

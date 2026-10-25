@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="popup.css">
+  <title>Guardar consulta MTC</title>
+</head>
+<body>
+  <h1>MTC → Licencias</h1>
+  <p>Realiza la consulta y el captcha manualmente. Cuando veas el resultado, presiona guardar.</p>
+  <label>URL del sistema<input id="endpoint" type="url" placeholder="https://tu-dominio.com"></label>
+  <label>Token de integración<input id="token" type="password" autocomplete="off"></label>
+  <div class="actions">
+    <button id="save-settings" class="secondary">Guardar configuración</button>
+    <button id="open-mtc" class="secondary">Abrir MTC</button>
+    <button id="import-record">Guardar resultado</button>
+  </div>
+  <p id="status" role="status"></p>
+  <script src="popup.js"></script>
+</body>
+</html>
+
