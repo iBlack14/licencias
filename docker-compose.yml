@@ -22,13 +22,13 @@ services:
         condition: service_healthy
     environment:
       HOST: 0.0.0.0
-      PORT: 3000
+      PORT: 3005
       DATABASE_URL: postgresql://${POSTGRES_USER:-licencias}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-licencias}?schema=public
       ADMIN_USER: ${ADMIN_USER}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       CAPTCHA_SECRET: ${CAPTCHA_SECRET}
     expose:
-      - "3000"
+      - "3005"
 
 volumes:
   postgres_data:

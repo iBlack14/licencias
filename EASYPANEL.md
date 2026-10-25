@@ -22,7 +22,7 @@ No definas `DATABASE_URL`: Compose la construye usando el servicio interno `db`.
 
 ## Dominio
 
-Después del despliegue, agrega un dominio con Internal service `app`, Target port `3000` y protocolo `HTTP`. No publiques puertos manualmente; EasyPanel administra HTTPS y PostgreSQL permanece privado.
+Después del despliegue, agrega un dominio con Internal service `app`, Target port `3005` y protocolo `HTTP`. No publiques puertos manualmente; EasyPanel administra HTTPS y PostgreSQL permanece privado.
 
 ## Persistencia
 

@@ -12,6 +12,6 @@ COPY public ./public
 COPY data ./data
 COPY database.js mtc_service.js server.js ./
 
-EXPOSE 3000
+EXPOSE 3005
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
 
