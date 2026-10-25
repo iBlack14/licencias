@@ -31,14 +31,16 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
   let browser;
   let deadline;
   try {
-    deadline = setTimeout(() => browser?.close().catch(() => {}), 25000);
+    deadline = setTimeout(() => browser?.close().catch(() => {}), 45000);
     deadline.unref?.();
     browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     log('browser_started');
-    const page = await browser.newPage();
+    page = await browser.newPage();
+    page.on('console', message => { if (['error','warning'].includes(message.type())) log('portal_console', { level: message.type(), text: message.text().slice(0, 300) }); });
+    page.on('requestfailed', request => { let host = 'unknown'; try { host = new URL(request.url()).hostname; } catch {} log('request_failed', { host, error: request.failure()?.errorText || 'unknown' }); });
 
     let rateLimited = false;
     page.on('response', res => {
@@ -58,7 +60,10 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
 
     // Llenar el documento
     const inputSelector = docType === 'DNI' ? '#mat-input-0' : '#mat-input-1, #mat-input-0';
-    await page.fill(inputSelector, number);
+    const documentInput = page.getByRole('textbox', { name: /Documento de identidad/i });
+    await documentInput.waitFor({ state: 'visible', timeout: 20000 });
+    log('form_ready');
+    await documentInput.fill(number);
 
     // Aceptar consentimiento y abrir captcha
     await page.click('label[for="mat-checkbox-2-input"]').catch(() => {});
@@ -151,7 +156,9 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
     log('record_found', { document: masked(number), licenseClass: record.licenseClass });
     return { ok: true, record };
   } catch (err) {
-    log('lookup_failed', { name: err.name, message: err.message });
+    const title = page ? await page.title().catch(() => '') : '';
+    let host = ''; try { host = page ? new URL(page.url()).hostname : ''; } catch {}
+    log('lookup_failed', { name: err.name, message: err.message, title, host });
     return { ok: false, error: 'error', message: 'La consulta está tardando más de lo esperado. Inténtelo nuevamente.' };
   } finally {
     clearTimeout(deadline);
