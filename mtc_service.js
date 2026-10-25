@@ -20,7 +20,10 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
   if (!number) return { ok: false, message: 'Número de documento requerido.' };
 
   let browser;
+  let deadline;
   try {
+    deadline = setTimeout(() => browser?.close().catch(() => {}), 25000);
+    deadline.unref?.();
     browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -133,8 +136,10 @@ async function fetchMtcDriver(docType = 'DNI', docNumber) {
 
     return { ok: true, record };
   } catch (err) {
+    return { ok: false, error: 'error', message: 'La consulta está tardando más de lo esperado. Inténtelo nuevamente.' };
+  } finally {
+    clearTimeout(deadline);
     if (browser) await browser.close().catch(() => {});
-    return { ok: false, error: 'error', message: err.message };
   }
 }
 

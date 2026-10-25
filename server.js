@@ -72,6 +72,8 @@ const server=http.createServer(async(req,res)=>{
             record=await db.upsertRecord(record);
           }else if(mtc.error==='rate_limited'){
             return json(res,429,{ok:false,message:mtc.message});
+          }else if(mtc.error==='error'){
+            return json(res,503,{ok:false,message:mtc.message});
           }
         }catch(e){}
       }
