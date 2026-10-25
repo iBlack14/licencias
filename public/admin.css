@@ -276,6 +276,10 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 16px;
 }
 
+.modal-knowledge {
+  max-width: 720px;
+}
+
 .form-group label {
   font-size: 0.77rem;
   font-weight: 600;

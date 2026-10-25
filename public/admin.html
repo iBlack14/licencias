@@ -517,6 +517,93 @@
     </div>
   </div>
 
+  <!-- MODAL: EXAMEN DE CONOCIMIENTO -->
+  <div id="knowledge-modal" class="modal-overlay" hidden>
+    <div class="modal-backdrop" id="knowledge-backdrop"></div>
+    <div class="modal-card modal-knowledge" role="dialog" aria-modal="true" aria-labelledby="knowledge-title">
+      <div class="modal-header">
+        <h3 id="knowledge-title">Nuevo Examen de Conocimiento</h3>
+        <button class="modal-close" id="knowledge-close" type="button" aria-label="Cerrar">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form id="knowledge-form" novalidate>
+        <div class="modal-body">
+          <div class="form-section-title">
+            <span class="material-icons modal-section-icon" style="color:#0066b2">person</span>
+            <span>Datos del postulante</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="k-docType">Tipo de documento</label>
+              <select id="k-docType">
+                <option value="DNI">DNI - Documento Nacional de Identidad</option>
+                <option value="CE">CE - Carné de Extranjería</option>
+                <option value="PAS">PAS - Pasaporte</option>
+                <option value="PTP">PTP/CPP - Permiso Temporal de Permanencia</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="k-docNum">Número de documento</label>
+              <input id="k-docNum" type="text" maxlength="15" required placeholder="Ej: 72218318">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="k-firstNames">Nombres completos</label>
+              <input id="k-firstNames" type="text" maxlength="120" required>
+            </div>
+            <div class="form-group">
+              <label for="k-lastNames">Apellidos completos</label>
+              <input id="k-lastNames" type="text" maxlength="120" required>
+            </div>
+          </div>
+
+          <div class="form-section-title">
+            <span class="material-icons modal-section-icon" style="color:#0066b2">menu_book</span>
+            <span>Examen de conocimiento</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="k-tramite">Tipo de trámite</label>
+              <select id="k-tramite">
+                <option value="REVALIDACIÓN">REVALIDACIÓN</option>
+                <option value="OBTENCIÓN">OBTENCIÓN</option>
+                <option value="RECATEGORIZACIÓN">RECATEGORIZACIÓN</option>
+                <option value="DUPLICADO">DUPLICADO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="k-category">Categoría</label>
+              <input id="k-category" type="text" required placeholder="Ej: A I o B II-C">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="k-center">Centro evaluador</label>
+            <input id="k-center" type="text" required placeholder="Ej: TOURING Y AUTOMOVIL CLUB DEL PERU">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="k-date">Fecha del examen</label>
+              <input id="k-date" type="text" maxlength="10" placeholder="DD/MM/AAAA">
+            </div>
+            <div class="form-group">
+              <label for="k-expiry">Vigente hasta</label>
+              <input id="k-expiry" type="text" maxlength="10" placeholder="DD/MM/AAAA">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <p id="knowledge-error" class="form-error" hidden></p>
+          <button type="button" class="btn-secondary" id="knowledge-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary" id="knowledge-save">
+            <span class="material-icons">save</span> Guardar examen
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: CONFIRM DELETE -->
   <div id="delete-modal" class="modal-overlay" hidden>
     <div class="modal-backdrop" id="delete-backdrop"></div>

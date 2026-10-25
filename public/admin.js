@@ -456,6 +456,7 @@ function renderStats() {
    EXAMEN DE CONOCIMIENTO
    —————————————————————————————— */
 let ecSearchTerm = '';
+let knowledgeEditingDoc = null;
 
 function resultBadge(status) {
   // Vigente / Aprobado → verde, Suspendida → naranja, Revocada/Vencida → rojo
@@ -517,7 +518,7 @@ function renderExamConocimiento() {
 
   tbody.querySelectorAll('.action-btn.edit').forEach(btn => {
     btn.addEventListener('click', () => {
-      openEditModal(btn.dataset.doc);
+      openKnowledgeModal(btn.dataset.doc);
     });
   });
 }
@@ -528,7 +529,91 @@ $('ec-search').addEventListener('input', e => {
 });
 
 $('ec-add-btn').addEventListener('click', () => {
-  openAddModal();
+  openKnowledgeModal();
+});
+
+const knowledgeModal = $('knowledge-modal');
+const knowledgeForm = $('knowledge-form');
+const knowledgeError = $('knowledge-error');
+
+function openKnowledgeModal(docNumber = null) {
+  const rec = docNumber ? allRecords.find(r => r.documentNumber === docNumber) : null;
+  const ev = rec?.evaluations || {};
+  knowledgeEditingDoc = rec?.documentNumber || null;
+  knowledgeForm.reset();
+  knowledgeError.hidden = true;
+  $('knowledge-title').textContent = rec ? 'Editar Examen de Conocimiento' : 'Nuevo Examen de Conocimiento';
+  $('k-docType').value = rec?.documentType || 'DNI';
+  $('k-docNum').value = rec?.documentNumber || '';
+  $('k-firstNames').value = rec?.firstNames || '';
+  $('k-lastNames').value = rec?.lastNames || '';
+  $('k-tramite').value = ev.tramite || 'REVALIDACIÓN';
+  $('k-category').value = ev.evalCategoria || rec?.licenseClass || 'A I';
+  $('k-center').value = ev.conCentro || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
+  $('k-date').value = ev.conFecha || '';
+  $('k-expiry').value = ev.conVence || '';
+  resetModalPosition(knowledgeModal);
+  knowledgeModal.hidden = false;
+  $('k-docNum').focus();
+}
+
+function closeKnowledgeModal() {
+  knowledgeModal.hidden = true;
+  knowledgeEditingDoc = null;
+  resetModalPosition(knowledgeModal);
+}
+
+$('knowledge-close').addEventListener('click', closeKnowledgeModal);
+$('knowledge-cancel').addEventListener('click', closeKnowledgeModal);
+$('knowledge-backdrop').addEventListener('click', closeKnowledgeModal);
+
+knowledgeForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  knowledgeError.hidden = true;
+  if (!knowledgeForm.checkValidity()) {
+    knowledgeForm.reportValidity();
+    return;
+  }
+  const existing = knowledgeEditingDoc
+    ? allRecords.find(r => r.documentNumber === knowledgeEditingDoc)
+    : null;
+  const ev = existing?.evaluations || {};
+  const documentNumber = $('k-docNum').value.trim().toUpperCase();
+  const category = $('k-category').value.trim().toUpperCase();
+  const body = {
+    ...(existing || {}),
+    ...ev,
+    documentType: $('k-docType').value,
+    documentNumber,
+    firstNames: $('k-firstNames').value.trim().toUpperCase(),
+    lastNames: $('k-lastNames').value.trim().toUpperCase(),
+    licenseClass: existing?.licenseClass || category,
+    licenseNumber: existing?.licenseNumber || `PENDIENTE-${documentNumber}`,
+    tramite: $('k-tramite').value,
+    evalCategoria: category,
+    conCentro: $('k-center').value.trim().toUpperCase(),
+    conFecha: $('k-date').value.trim(),
+    conVence: $('k-expiry').value.trim()
+  };
+
+  const btn = $('knowledge-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#fff;width:14px;height:14px;border-width:2px"></span> Guardando…';
+  const result = knowledgeEditingDoc
+    ? await apiFetch(`/api/admin/records/${encodeURIComponent(knowledgeEditingDoc)}`, { method: 'PUT', body })
+    : await apiFetch('/api/admin/records', { method: 'POST', body });
+  btn.disabled = false;
+  btn.innerHTML = '<span class="material-icons">save</span> Guardar examen';
+
+  if (!result.ok) {
+    knowledgeError.textContent = result.data.message || 'No se pudo guardar el examen.';
+    knowledgeError.hidden = false;
+    return;
+  }
+  const wasEditing = Boolean(knowledgeEditingDoc);
+  closeKnowledgeModal();
+  await loadRecords();
+  toast(wasEditing ? 'Examen de conocimiento actualizado' : 'Examen de conocimiento registrado', 'success');
 });
 
 /* ——————————————————————————————
@@ -604,6 +689,7 @@ $('ecd-add-btn').addEventListener('click', () => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (!recordModal.hidden) closeRecordModal();
+    if (!knowledgeModal.hidden) closeKnowledgeModal();
     if (!deleteModal.hidden) closeDeleteModal();
   }
   // Ctrl+N = new record (when dashboard is visible)
@@ -683,4 +769,5 @@ function makeModalDraggable(modalOverlay) {
 
 // Inicializar modales arrastrables
 makeModalDraggable(recordModal);
+makeModalDraggable(knowledgeModal);
 makeModalDraggable(deleteModal);
