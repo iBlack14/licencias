@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MTC → Licencias",
-    "version": "1.1.2",
+    "version": "1.2.0",
   "description": "Guarda en el sistema un resultado consultado manualmente en el portal del MTC.",
     "permissions": [
         "activeTab",
@@ -15,6 +15,16 @@
   ],
   "content_scripts": [
     {
+      "matches": [
+        "https://licencias.mtc.gob.pe/*"
+      ],
+      "js": [
+        "network-monitor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
             "matches": [
                 "https://licencias.mtc.gob.pe/*",
                 "https://soat-licencia.stkkft.easypanel.host/*"
@@ -22,7 +32,7 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
     "action": {

@@ -1,6 +1,29 @@
 if (!globalThis.__mtcLicenciasContentLoaded) {
 globalThis.__mtcLicenciasContentLoaded = true;
 
+const capturedJson = [];
+
+function formatCapturedJson() {
+  return JSON.stringify(capturedJson, null, 2);
+}
+
+function updateCaptureCounter() {
+  const button = document.querySelector('#mtc-json-captures');
+  if (button) button.textContent = `Ver JSON capturados (${capturedJson.length})`;
+}
+
+if (location.hostname === 'licencias.mtc.gob.pe') {
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (event.source !== window || message?.source !== 'mtc-json-monitor' || message?.type !== 'JSON_RESPONSE') return;
+    capturedJson.push(message.entry);
+    if (capturedJson.length > 50) capturedJson.shift();
+    chrome.storage.local.set({ mtcJsonCaptures: capturedJson }).catch(() => {});
+    console.info('[MTC → Licencias] Respuesta JSON capturada:', message.entry);
+    updateCaptureCounter();
+  });
+}
+
 function valueFor(map, ...labels) {
   for (const label of labels) {
     if (map[label]) return map[label];
@@ -91,9 +114,49 @@ function showAssistant(message, action) {
     button.addEventListener('click', action.run);
     box.append(button);
   }
+  if (location.hostname === 'licencias.mtc.gob.pe') {
+    const jsonButton = document.createElement('button');
+    jsonButton.id = 'mtc-json-captures';
+    jsonButton.textContent = `Ver JSON capturados (${capturedJson.length})`;
+    Object.assign(jsonButton.style, { width: '100%', marginTop: '8px', padding: '9px', border: '1px solid #455a73', borderRadius: '4px', background: '#fff', color: '#26384e', fontWeight: '700', cursor: 'pointer' });
+    jsonButton.addEventListener('click', () => showJsonViewer());
+    box.append(jsonButton);
+  }
+}
+
+function showJsonViewer() {
+  let viewer = document.querySelector('#mtc-json-viewer');
+  if (!viewer) {
+    viewer = document.createElement('section');
+    viewer.id = 'mtc-json-viewer';
+    Object.assign(viewer.style, { position: 'fixed', inset: '5%', zIndex: '2147483647', padding: '16px', borderRadius: '8px', background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,.5)', font: '13px Arial,sans-serif', display: 'flex', flexDirection: 'column' });
+    document.body.append(viewer);
+  }
+  viewer.replaceChildren();
+  const title = document.createElement('strong');
+  title.textContent = `Respuestas JSON detectadas: ${capturedJson.length}`;
+  const pre = document.createElement('pre');
+  pre.textContent = capturedJson.length ? formatCapturedJson() : 'Todavía no se detectaron respuestas JSON. Realiza una consulta en el MTC.';
+  Object.assign(pre.style, { flex: '1', overflow: 'auto', whiteSpace: 'pre-wrap', background: '#f4f6f8', padding: '12px', border: '1px solid #ddd' });
+  const controls = document.createElement('div');
+  Object.assign(controls.style, { display: 'flex', gap: '8px' });
+  const copy = document.createElement('button');
+  copy.textContent = 'Copiar JSON';
+  copy.onclick = async () => { await navigator.clipboard.writeText(formatCapturedJson()); copy.textContent = 'Copiado ✓'; };
+  const clear = document.createElement('button');
+  clear.textContent = 'Limpiar';
+  clear.onclick = async () => { capturedJson.length = 0; await chrome.storage.local.remove('mtcJsonCaptures'); viewer.remove(); updateCaptureCounter(); };
+  const close = document.createElement('button');
+  close.textContent = 'Cerrar';
+  close.onclick = () => viewer.remove();
+  [copy, clear, close].forEach(button => Object.assign(button.style, { padding: '9px 14px', cursor: 'pointer' }));
+  controls.append(copy, clear, close);
+  viewer.append(title, pre, controls);
 }
 
 async function installMtcAssistant() {
+  const saved = await chrome.storage.local.get('mtcJsonCaptures');
+  if (Array.isArray(saved.mtcJsonCaptures)) capturedJson.push(...saved.mtcJsonCaptures.slice(-50));
   const { pendingLookup } = await chrome.storage.local.get('pendingLookup');
   if (!pendingLookup?.documentNumber) return;
 
