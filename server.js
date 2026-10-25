@@ -117,7 +117,8 @@ const server=http.createServer(async(req,res)=>{
         searchLog(record?'database_fallback_hit':'database_fallback_miss',{document:masked(number)});
       }
       if(!record&&mtcFailure?.error==='rate_limited')return json(res,429,{ok:false,message:mtcFailure.message});
-      if(!record&&(mtcFailure?.error==='error'||mtcFailure?.error==='blocked'))return json(res,503,{ok:false,message:mtcFailure.message});
+      if(!record&&mtcFailure?.error==='blocked')return json(res,503,{ok:false,error:'extension_required',message:'La consulta debe completarse mediante la extensión del navegador.'});
+      if(!record&&mtcFailure?.error==='error')return json(res,503,{ok:false,message:mtcFailure.message});
       if(!record)return json(res,404,{ok:false,message:'¡No se encontró información de persona natural!!'});
       const id=crypto.randomUUID();
       queryResults.set(id,{record,expires:Date.now()+5*60*1000});
