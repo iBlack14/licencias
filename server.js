@@ -41,7 +41,8 @@ function safeEqual(a,b){const left=Buffer.from(String(a));const right=Buffer.fro
 function clean(value,max=120){return String(value||'').trim().slice(0,max)}
 function masked(value){const text=String(value||'');return '*'.repeat(Math.max(0,text.length-4))+text.slice(-4)}
 function searchLog(event,details={}){console.log(JSON.stringify({time:new Date().toISOString(),scope:'search',event,...details}))}
-function normalizeRecord(input){return{documentType:clean(input.documentType,30)||'DNI',documentNumber:clean(input.documentNumber,15).toUpperCase(),lastNames:clean(input.lastNames),firstNames:clean(input.firstNames),licenseClass:clean(input.licenseClass,30),licenseNumber:clean(input.licenseNumber,30),licenseType:clean(input.licenseType,30)||'FISICA',status:clean(input.status,30)||'Vigente',issuedAt:clean(input.issuedAt,20),expiresAt:clean(input.expiresAt,20),restrictions:clean(input.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(input.issuer,180),points:Number.isFinite(Number(input.points))?Number(input.points):0,source:clean(input.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
+function normalizeDocumentType(value){const type=clean(value,30).toUpperCase();if(type==='DNI'||type.includes('NACIONAL'))return 'DNI';if(type==='CE'||type.includes('EXTRANJER'))return 'CE';if(type.includes('PASAPORTE'))return 'PAS';if(type.includes('PTP')||type.includes('CPP'))return 'PTP';if(type.includes('SOLICITANTE'))return 'CARNE_SOLICITANTE';if(type.includes('TARJETA'))return 'TARJETA_IDENTIDAD';return type||'DNI'}
+function normalizeRecord(input){return{documentType:normalizeDocumentType(input.documentType),documentNumber:clean(input.documentNumber,15).toUpperCase(),lastNames:clean(input.lastNames),firstNames:clean(input.firstNames),licenseClass:clean(input.licenseClass,30),licenseNumber:clean(input.licenseNumber,30),licenseType:clean(input.licenseType,30)||'FISICA',status:clean(input.status,30)||'Vigente',issuedAt:clean(input.issuedAt,20),expiresAt:clean(input.expiresAt,20),restrictions:clean(input.restrictions,120)||'SIN RESTRICCIONES',issuer:clean(input.issuer,180),points:Number.isFinite(Number(input.points))?Number(input.points):0,source:clean(input.source,30)||'LOCAL',updatedAt:new Date().toISOString()}}
 function validateRecord(record){const error=validateDocument(record.documentType,record.documentNumber);if(error)return error;if(!record.lastNames||!record.firstNames)return 'Ingrese apellidos y nombres.';if(!record.licenseClass||!record.licenseNumber)return 'Ingrese clase y número de licencia.';return null}
 function makeCaptcha(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<6;i+=1)code+=alphabet[crypto.randomInt(alphabet.length)];const expires=Date.now()+300000;const payload=Buffer.from(JSON.stringify({code,expires})).toString('base64url');const signature=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');const token=`${payload}.${signature}`;const chars=[...code].map((char,index)=>`<text x="${31+index*27}" y="29">${char}</text>`).join('');const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="210" height="38"><rect width="210" height="38" fill="#fffaf0"/><g font-family="Arial" font-size="27" fill="#171717">${chars}</g></svg>`;return{token,image:`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`}}
 function verifyCaptcha(token,answer){if(!token||!answer||!token.includes('.'))return false;try{const[payload,signature]=token.split('.');const expected=crypto.createHmac('sha256',CAPTCHA_SECRET).update(payload).digest('base64url');if(signature.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected)))return false;const data=JSON.parse(Buffer.from(payload,'base64url').toString('utf8'));return data.expires>Date.now()&&data.code===String(answer).trim().toUpperCase()}catch{return false}}
@@ -52,6 +53,12 @@ const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
   try{
     if(req.method==='GET'&&url.pathname==='/api/captcha')return json(res,200,makeCaptcha());
+    if(req.method==='GET'&&url.pathname==='/api/integrations/status'){
+      const authorization=String(req.headers.authorization||'');
+      const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
+      if(!EXTENSION_API_TOKEN||!safeEqual(token,EXTENSION_API_TOKEN))return json(res,401,{ok:false,message:'Token de integración inválido.'});
+      return json(res,200,{ok:true,message:'Integración disponible.'});
+    }
     if(req.method==='POST'&&url.pathname==='/api/integrations/mtc-record'){
       const authorization=String(req.headers.authorization||'');
       const token=authorization.startsWith('Bearer ')?authorization.slice(7):'';
@@ -95,7 +102,7 @@ const server=http.createServer(async(req,res)=>{
       }
       if(!record){
         searchLog('database_fallback_started',{document:masked(number)});
-        record=await db.findRecord(type,number);
+        record=await db.findByDocumentNumber(number);
         searchLog(record?'database_fallback_hit':'database_fallback_miss',{document:masked(number)});
       }
       if(!record&&mtcFailure?.error==='rate_limited')return json(res,429,{ok:false,message:mtcFailure.message});
