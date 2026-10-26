@@ -23,9 +23,12 @@ model DriverRecord {
   issuer         String   @db.VarChar(180)
   points         Int      @default(0)
   source         String   @default("LOCAL") @db.VarChar(30)
+  deletedAt      DateTime?
+  deletedBy      String?  @db.VarChar(40)
   updatedAt      DateTime @updatedAt
 
   @@index([documentType, documentNumber])
+  @@index([deletedAt])
   @@map("driver_records")
 }
 

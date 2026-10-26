@@ -150,6 +150,10 @@ let deleteTarget = null;
 let activeFilter = 'all';
 let searchTerm   = '';
 
+function activeRecords() {
+  return allRecords.filter(record => !record.deletedAt);
+}
+
 /* ——————————————————————————————
    LOAD RECORDS
    —————————————————————————————— */
@@ -169,6 +173,7 @@ async function loadRecords() {
     return;
   }
   allRecords = data.records || [];
+  $('deleted-filter').hidden = currentAdmin?.role !== 'superadmin';
   renderTable();
   renderExamConocimiento();
   renderCofipro('a');
@@ -186,8 +191,12 @@ function renderTable() {
   let filtered = allRecords;
 
   // Filter by status
-  if (activeFilter !== 'all') {
+  if (activeFilter === 'deleted') {
+    filtered = filtered.filter(r => r.deletedAt);
+  } else if (activeFilter !== 'all') {
     filtered = filtered.filter(r => r.status === activeFilter);
+  } else {
+    filtered = filtered.filter(r => !r.deletedAt);
   }
 
   // Filter by search term
@@ -213,7 +222,7 @@ function renderTable() {
   }
 
   tbody.innerHTML = filtered.map(r => `
-    <tr>
+    <tr class="${r.deletedAt ? 'record-deleted' : ''}">
       <td class="doc-chip">${r.documentType || 'DNI'} · ${r.documentNumber || ''}</td>
       <td>
         <strong>${r.lastNames || ''}</strong><br>
@@ -221,15 +230,15 @@ function renderTable() {
       </td>
       <td><strong>${r.licenseClass || ''}</strong></td>
       <td class="doc-chip">${r.licenseNumber || ''}</td>
-      <td>${statusBadge(r.status)}</td>
+      <td>${r.deletedAt ? '<span class="status-badge deleted"><span class="status-dot"></span>Eliminado</span>' : statusBadge(r.status)}</td>
       <td style="font-size:.83rem">${r.expiresAt || '—'}</td>
       <td style="text-align:center">${r.points ?? 0}</td>
       <td style="text-align:center;white-space:nowrap">
-        <button class="action-btn edit" title="Editar" data-doc="${r.documentNumber}">
+        ${r.deletedAt ? '' : `<button class="action-btn edit" title="Editar" data-doc="${r.documentNumber}">
           <span class="material-icons">edit</span>
-        </button>
-        <button class="action-btn delete" title="Eliminar" data-doc="${r.documentNumber}" data-name="${r.lastNames} ${r.firstNames}">
-          <span class="material-icons">delete</span>
+        </button>`}
+        <button class="action-btn delete" title="${r.deletedAt ? 'Eliminar definitivamente' : 'Eliminar'}" data-doc="${r.documentNumber}" data-name="${r.lastNames} ${r.firstNames}" data-permanent="${Boolean(r.deletedAt)}">
+          <span class="material-icons">${r.deletedAt ? 'delete_forever' : 'delete'}</span>
         </button>
       </td>
     </tr>
@@ -241,7 +250,7 @@ function renderTable() {
   });
   // Delete buttons
   tbody.querySelectorAll('.action-btn.delete').forEach(btn => {
-    btn.addEventListener('click', () => openDeleteModal(btn.dataset.doc, btn.dataset.name));
+    btn.addEventListener('click', () => openDeleteModal(btn.dataset.doc, btn.dataset.name, btn.dataset.permanent === 'true'));
   });
 }
 
@@ -375,15 +384,22 @@ recordForm.addEventListener('submit', async e => {
    —————————————————————————————— */
 const deleteModal = $('delete-modal');
 
-function openDeleteModal(docNumber, name) {
+function openDeleteModal(docNumber, name, permanent = false) {
   deleteTarget = docNumber;
+  deleteModal.dataset.permanent = String(permanent);
   $('delete-name').textContent = name || docNumber;
+  $('delete-title').textContent = permanent ? 'Eliminar definitivamente' : 'Eliminar registro';
+  $('delete-warning').textContent = permanent
+    ? 'Esta acción borrará definitivamente el registro y sus evaluaciones. No se puede deshacer.'
+    : 'El registro dejará de estar visible para operadores y consultas públicas, pero permanecerá guardado.';
+  $('delete-confirm').innerHTML = `<span class="material-icons">${permanent ? 'delete_forever' : 'delete'}</span> ${permanent ? 'Eliminar definitivamente' : 'Confirmar eliminación'}`;
   resetModalPosition(deleteModal);
   deleteModal.hidden = false;
 }
 function closeDeleteModal() { 
   deleteModal.hidden = true; 
   deleteTarget = null; 
+  delete deleteModal.dataset.permanent;
   resetModalPosition(deleteModal);
 }
 
@@ -398,12 +414,13 @@ $('delete-confirm').addEventListener('click', async () => {
 
   const { ok, data } = await apiFetch(`/api/admin/records/${encodeURIComponent(deleteTarget)}`, { method: 'DELETE' });
   btn.disabled = false;
-  btn.innerHTML = '<span class="material-icons">delete</span> Eliminar';
+  const permanent = deleteModal.dataset.permanent === 'true';
+  btn.innerHTML = `<span class="material-icons">${permanent ? 'delete_forever' : 'delete'}</span> ${permanent ? 'Eliminar definitivamente' : 'Confirmar eliminación'}`;
 
   if (ok) {
     closeDeleteModal();
     await loadRecords();
-    toast('Registro eliminado correctamente', 'success');
+    toast(data.permanent ? 'Registro eliminado definitivamente' : 'Registro ocultado correctamente', 'success');
     if ($('section-stats').classList.contains('active')) renderStats();
   } else {
     closeDeleteModal();
@@ -498,10 +515,11 @@ userForm.addEventListener('submit', async event => {
    —————————————————————————————— */
 function renderStats() {
   const isSuperadmin = currentAdmin?.role === 'superadmin';
-  const realTotal      = allRecords.length;
-  const realVigente    = allRecords.filter(r => r.status === 'Vigente').length;
-  const realSuspendida = allRecords.filter(r => r.status === 'Suspendida').length;
-  const realRevocada   = allRecords.filter(r => r.status === 'Revocada').length;
+  const records = activeRecords();
+  const realTotal      = records.length;
+  const realVigente    = records.filter(r => r.status === 'Vigente').length;
+  const realSuspendida = records.filter(r => r.status === 'Suspendida').length;
+  const realRevocada   = records.filter(r => r.status === 'Revocada').length;
   const total      = isSuperadmin ? realTotal : 9000 + realTotal;
   const vigente    = isSuperadmin ? realVigente : 8472 + realVigente;
   const suspendida = isSuperadmin ? realSuspendida : 381 + realSuspendida;
@@ -522,7 +540,7 @@ function renderStats() {
     'A-IIIc': 630,
     'B II-C': 500
   };
-  allRecords.forEach(r => { classes[r.licenseClass || 'N/A'] = (classes[r.licenseClass || 'N/A'] || 0) + 1; });
+  records.forEach(r => { classes[r.licenseClass || 'N/A'] = (classes[r.licenseClass || 'N/A'] || 0) + 1; });
   const maxVal = Math.max(1, ...Object.values(classes));
   const chart  = $('bar-chart');
   chart.innerHTML = Object.entries(classes).map(([cls, count]) => `
@@ -562,14 +580,15 @@ function resultBadge(status) {
 function renderExamConocimiento() {
   const tbody = $('ec-tbody');
   const q = ecSearchTerm.toLowerCase();
+  const records = activeRecords();
   const filtered = q
-    ? allRecords.filter(r =>
+    ? records.filter(r =>
         (r.documentNumber || '').toLowerCase().includes(q) ||
         (r.lastNames || '').toLowerCase().includes(q) ||
         (r.firstNames || '').toLowerCase().includes(q) ||
         (r.evaluations?.conCentro || '').toLowerCase().includes(q)
       )
-    : allRecords;
+    : records;
 
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">menu_book</span><p>${q ? 'No hay coincidencias.' : 'No hay registros de exámenes de conocimiento aún.'}</p></div></td></tr>`;
@@ -626,12 +645,13 @@ function renderCofipro(type) {
   const tbody = $(`${config.section}-tbody`);
   const q = cofiproSearchTerms[type].toLowerCase();
   const prefix = config.prefix;
-  const filtered = q ? allRecords.filter(r =>
+  const records = activeRecords();
+  const filtered = q ? records.filter(r =>
     (r.documentNumber || '').toLowerCase().includes(q) ||
     (r.lastNames || '').toLowerCase().includes(q) ||
     (r.firstNames || '').toLowerCase().includes(q) ||
     (r.evaluations?.[`${prefix}Centro`] || '').toLowerCase().includes(q)
-  ) : allRecords;
+  ) : records;
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">menu_book</span><p>${q ? 'No hay coincidencias.' : `No hay registros de ${config.empty} aún.`}</p></div></td></tr>`;
     return;
@@ -773,14 +793,15 @@ let drivingEditingDoc = null;
 function renderExamConduccion() {
   const tbody = $('ecd-tbody');
   const q = ecdSearchTerm.toLowerCase();
+  const records = activeRecords();
   const filtered = q
-    ? allRecords.filter(r =>
+    ? records.filter(r =>
         (r.documentNumber || '').toLowerCase().includes(q) ||
         (r.lastNames || '').toLowerCase().includes(q) ||
         (r.firstNames || '').toLowerCase().includes(q) ||
         (r.evaluations?.habCentro || '').toLowerCase().includes(q)
       )
-    : allRecords;
+    : records;
 
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">drive_eta</span><p>${q ? 'No hay coincidencias.' : 'No hay registros de exámenes de conducción aún.'}</p></div></td></tr>`;

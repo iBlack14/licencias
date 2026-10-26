@@ -18,11 +18,17 @@ const fields = {
   issuer: true,
   points: true,
   source: true,
+  deletedAt: true,
+  deletedBy: true,
   updatedAt: true
 };
 
 function serialize(record) {
-  return record ? { ...record, updatedAt: record.updatedAt.toISOString() } : null;
+  return record ? {
+    ...record,
+    deletedAt: record.deletedAt ? record.deletedAt.toISOString() : null,
+    updatedAt: record.updatedAt.toISOString()
+  } : null;
 }
 
 function data(record) {
@@ -62,27 +68,33 @@ function saveJsonRecords(records) {
   } catch { /* ignore */ }
 }
 
-async function listRecords() {
+async function listRecords(includeDeleted = false) {
   try {
-    return (await prisma.driverRecord.findMany({ select: fields, orderBy: { updatedAt: 'desc' } })).map(serialize);
+    return (await prisma.driverRecord.findMany({
+      where: includeDeleted ? undefined : { deletedAt: null },
+      select: fields,
+      orderBy: { updatedAt: 'desc' }
+    })).map(serialize);
   } catch (err) {
-    return loadJsonRecords();
+    const records = loadJsonRecords();
+    return includeDeleted ? records : records.filter(record => !record.deletedAt);
   }
 }
 async function findRecord(documentType, documentNumber) {
   try {
-    return serialize(await prisma.driverRecord.findFirst({ where: { documentType, documentNumber }, select: fields }));
+    return serialize(await prisma.driverRecord.findFirst({ where: { documentType, documentNumber, deletedAt: null }, select: fields }));
   } catch (err) {
     const list = loadJsonRecords();
-    return list.find(r => r.documentType === documentType && r.documentNumber === documentNumber) || null;
+    return list.find(r => r.documentType === documentType && r.documentNumber === documentNumber && !r.deletedAt) || null;
   }
 }
-async function findByDocumentNumber(documentNumber) {
+async function findByDocumentNumber(documentNumber, includeDeleted = false) {
   try {
-    return serialize(await prisma.driverRecord.findUnique({ where: { documentNumber }, select: fields }));
+    const record = serialize(await prisma.driverRecord.findUnique({ where: { documentNumber }, select: fields }));
+    return record && (includeDeleted || !record.deletedAt) ? record : null;
   } catch (err) {
     const list = loadJsonRecords();
-    return list.find(r => r.documentNumber === documentNumber) || null;
+    return list.find(r => r.documentNumber === documentNumber && (includeDeleted || !r.deletedAt)) || null;
   }
 }
 async function createRecord(record) {
@@ -116,6 +128,23 @@ async function deleteRecord(documentNumber) {
   } catch { /* ignore */ }
   const list = loadJsonRecords().filter(r => r.documentNumber !== documentNumber);
   saveJsonRecords(list);
+}
+async function softDeleteRecord(documentNumber, deletedBy) {
+  const deletedAt = new Date();
+  let updated = null;
+  try {
+    updated = serialize(await prisma.driverRecord.update({
+      where: { documentNumber },
+      data: { deletedAt, deletedBy },
+      select: fields
+    }));
+  } catch (err) {
+    const existing = loadJsonRecords().find(record => record.documentNumber === documentNumber);
+    if (existing) updated = { ...existing, deletedAt: deletedAt.toISOString(), deletedBy, updatedAt: deletedAt.toISOString() };
+  }
+  const list = loadJsonRecords().map(record => record.documentNumber === documentNumber ? (updated || record) : record);
+  saveJsonRecords(list);
+  return updated;
 }
 async function upsertRecord(record) {
   const payload = data(record);
@@ -153,4 +182,4 @@ async function deleteAdminUser(id) {
   return prisma.adminUser.delete({ where: { id } });
 }
 
-module.exports = { prisma, listRecords, findRecord, findByDocumentNumber, createRecord, updateRecord, deleteRecord, upsertRecord, listAdminUsers, findAdminUser, createAdminUser, deleteAdminUser };
+module.exports = { prisma, listRecords, findRecord, findByDocumentNumber, createRecord, updateRecord, deleteRecord, softDeleteRecord, upsertRecord, listAdminUsers, findAdminUser, createAdminUser, deleteAdminUser };

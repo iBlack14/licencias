@@ -172,6 +172,7 @@
             <button class="chip" data-filter="Vigente">Vigentes</button>
             <button class="chip" data-filter="Suspendida">Suspendidas</button>
             <button class="chip" data-filter="Revocada">Revocadas</button>
+            <button class="chip" data-filter="deleted" id="deleted-filter" hidden>Eliminados</button>
           </div>
         </div>
 
@@ -693,8 +694,8 @@
         <h3 id="delete-title">Eliminar registro</h3>
       </div>
       <div class="modal-body">
-        <p>¿Está seguro de eliminar del sistema el registro de <strong id="delete-name"></strong>?</p>
-        <p class="delete-warn">Esta acción no se puede deshacer y quedará registrada en auditoría.</p>
+        <p id="delete-message">¿Está seguro de eliminar del sistema el registro de <strong id="delete-name"></strong>?</p>
+        <p class="delete-warn" id="delete-warning">El registro dejará de estar visible, pero permanecerá guardado.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="delete-cancel">Cancelar</button>

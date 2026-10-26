@@ -166,7 +166,8 @@ const server=http.createServer(async(req,res)=>{
       const id=decodeURIComponent(userMatch[1]);let removed;try{removed=await db.deleteAdminUser(id)}catch{return json(res,404,{ok:false,message:'Usuario no encontrado.'})}for(const[sessionId,session]of sessions){if(session.username===removed.username)sessions.delete(sessionId)}return json(res,200,{ok:true});
     }
     if(req.method==='GET'&&url.pathname==='/api/admin/records'){
-      const records = (await db.listRecords()).map(attachEvals);
+      const session=adminSession(req);
+      const records = (await db.listRecords(session.role==='superadmin')).map(attachEvals);
       return json(res,200,{ok:true,records});
     }
     if(req.method==='POST'&&url.pathname==='/api/admin/records'){
@@ -262,12 +263,19 @@ const server=http.createServer(async(req,res)=>{
     }
     if(recordMatch&&req.method==='DELETE'){
       const documentNumber=decodeURIComponent(recordMatch[1]);
-      if(!await db.findByDocumentNumber(documentNumber))return json(res,404,{ok:false,message:'Registro no encontrado.'});
-      await db.deleteRecord(documentNumber);
-      const store = loadEvalsStore();
-      delete store[documentNumber];
-      saveEvalsStore(store);
-      return json(res,200,{ok:true});
+      const session=adminSession(req);
+      const record=await db.findByDocumentNumber(documentNumber,true);
+      if(!record)return json(res,404,{ok:false,message:'Registro no encontrado.'});
+      if(record.deletedAt){
+        if(session.role!=='superadmin')return json(res,403,{ok:false,message:'Solo el superadministrador puede eliminar definitivamente.'});
+        await db.deleteRecord(documentNumber);
+        const store = loadEvalsStore();
+        delete store[documentNumber];
+        saveEvalsStore(store);
+        return json(res,200,{ok:true,permanent:true});
+      }
+      await db.softDeleteRecord(documentNumber,session.username);
+      return json(res,200,{ok:true,permanent:false});
     }
     if(req.method==='POST'&&url.pathname==='/api/public/search'){
       const body=await readBody(req);
