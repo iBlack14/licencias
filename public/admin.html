@@ -98,6 +98,14 @@
           <span class="material-icons">menu_book</span>
           <span>Examen de conocimiento</span>
         </button>
+        <button class="nav-item" data-section="cofipro-a" id="nav-cofipro-a">
+          <span class="material-icons">menu_book</span>
+          <span>REVALIDACIÓN COFIPRO A</span>
+        </button>
+        <button class="nav-item" data-section="cofipro-b" id="nav-cofipro-b">
+          <span class="material-icons">menu_book</span>
+          <span>REVALIDACIÓN COFIPRO B</span>
+        </button>
         <button class="nav-item" data-section="exam-conduccion" id="nav-exam-conduccion">
           <span class="material-icons">drive_eta</span>
           <span>Examen de conducción</span>
@@ -277,6 +285,36 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- REVALIDACIÓN COFIPRO A SECTION -->
+      <section id="section-cofipro-a" class="content-section">
+        <div class="exam-section-header">
+          <div class="exam-section-icon-wrap exam-icon-blue"><span class="material-icons">menu_book</span></div>
+          <div><h2>REVALIDACIÓN COFIPRO A</h2><p>Registro y gestión de revalidaciones COFIPRO A</p></div>
+        </div>
+        <div class="exam-toolbar">
+          <div class="search-input-wrap"><span class="material-icons">search</span><input id="cofipro-a-search" type="text" placeholder="Buscar por DNI o apellidos…" autocomplete="off"></div>
+          <button class="btn-primary" id="cofipro-a-add-btn"><span class="material-icons">add</span>Nuevo Registro</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table"><thead><tr><th>DNI / Doc.</th><th>Postulante</th><th>Centro Evaluador</th><th>Fecha</th><th>Vigente hasta</th><th>Trámite</th><th>Categoría</th><th class="col-actions">Acciones</th></tr></thead><tbody id="cofipro-a-tbody"></tbody></table>
+        </div>
+      </section>
+
+      <!-- REVALIDACIÓN COFIPRO B SECTION -->
+      <section id="section-cofipro-b" class="content-section">
+        <div class="exam-section-header">
+          <div class="exam-section-icon-wrap exam-icon-blue"><span class="material-icons">menu_book</span></div>
+          <div><h2>REVALIDACIÓN COFIPRO B</h2><p>Registro y gestión de revalidaciones COFIPRO B</p></div>
+        </div>
+        <div class="exam-toolbar">
+          <div class="search-input-wrap"><span class="material-icons">search</span><input id="cofipro-b-search" type="text" placeholder="Buscar por DNI o apellidos…" autocomplete="off"></div>
+          <button class="btn-primary" id="cofipro-b-add-btn"><span class="material-icons">add</span>Nuevo Registro</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table"><thead><tr><th>DNI / Doc.</th><th>Postulante</th><th>Centro Evaluador</th><th>Fecha</th><th>Vigente hasta</th><th>Trámite</th><th>Categoría</th><th class="col-actions">Acciones</th></tr></thead><tbody id="cofipro-b-tbody"></tbody></table>
         </div>
       </section>
 
@@ -530,7 +568,7 @@
 
           <div class="form-section-title">
             <span class="material-icons modal-section-icon" style="color:#0066b2">menu_book</span>
-            <span>Examen de conocimiento</span>
+            <span id="knowledge-section-label">Examen de conocimiento</span>
           </div>
           <div class="form-row">
             <div class="form-group">

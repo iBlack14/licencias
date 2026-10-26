@@ -162,7 +162,17 @@ const server=http.createServer(async(req,res)=>{
         conVence: raw.conVence || record.expiresAt,
         habCentro: raw.habCentro || record.issuer,
         habFecha: raw.habFecha || record.issuedAt,
-        habVence: raw.habVence || record.expiresAt
+        habVence: raw.habVence || record.expiresAt,
+        cofiproATramite: raw.cofiproATramite || 'REVALIDACIÓN',
+        cofiproACategoria: raw.cofiproACategoria || record.licenseClass || 'A I',
+        cofiproACentro: raw.cofiproACentro || record.issuer,
+        cofiproAFecha: raw.cofiproAFecha || record.issuedAt,
+        cofiproAVence: raw.cofiproAVence || record.expiresAt,
+        cofiproBTramite: raw.cofiproBTramite || 'REVALIDACIÓN',
+        cofiproBCategoria: raw.cofiproBCategoria || record.licenseClass || 'A I',
+        cofiproBCentro: raw.cofiproBCentro || record.issuer,
+        cofiproBFecha: raw.cofiproBFecha || record.issuedAt,
+        cofiproBVence: raw.cofiproBVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,201,{ok:true,record:attachEvals(saved)});
@@ -189,7 +199,17 @@ const server=http.createServer(async(req,res)=>{
         conVence: raw.conVence || record.expiresAt,
         habCentro: raw.habCentro || record.issuer,
         habFecha: raw.habFecha || record.issuedAt,
-        habVence: raw.habVence || record.expiresAt
+        habVence: raw.habVence || record.expiresAt,
+        cofiproATramite: raw.cofiproATramite || 'REVALIDACIÓN',
+        cofiproACategoria: raw.cofiproACategoria || record.licenseClass || 'A I',
+        cofiproACentro: raw.cofiproACentro || record.issuer,
+        cofiproAFecha: raw.cofiproAFecha || record.issuedAt,
+        cofiproAVence: raw.cofiproAVence || record.expiresAt,
+        cofiproBTramite: raw.cofiproBTramite || 'REVALIDACIÓN',
+        cofiproBCategoria: raw.cofiproBCategoria || record.licenseClass || 'A I',
+        cofiproBCentro: raw.cofiproBCentro || record.issuer,
+        cofiproBFecha: raw.cofiproBFecha || record.issuedAt,
+        cofiproBVence: raw.cofiproBVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,200,{ok:true,record:attachEvals(updated)});
