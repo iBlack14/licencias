@@ -73,6 +73,8 @@ function validateDocument(type,value){const document=String(value||'').trim().to
 async function readBody(req){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>50000)throw new Error('Payload demasiado grande')}return JSON.parse(raw||'{}')}
 
 const EVALS_FILE = path.join(__dirname, 'data', 'evaluaciones_store.json');
+function hashPassword(password,salt=crypto.randomBytes(16).toString('hex')){return new Promise((resolve,reject)=>crypto.scrypt(String(password),salt,64,(error,key)=>error?reject(error):resolve(`${salt}:${key.toString('hex')}`)))}
+function verifyPassword(password,stored){return new Promise(resolve=>{const[salt,expected='']=String(stored||'').split(':');if(!salt||!expected)return resolve(false);crypto.scrypt(String(password),salt,64,(error,key)=>{if(error)return resolve(false);const actual=key.toString('hex');resolve(actual.length===expected.length&&crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))})})}
 function loadEvalsStore() {
   try {
     if (fs.existsSync(EVALS_FILE)) return JSON.parse(fs.readFileSync(EVALS_FILE, 'utf8') || '{}');
@@ -136,9 +138,33 @@ const server=http.createServer(async(req,res)=>{
       searchLog('extension_record_saved',{documentType:saved.documentType,document:masked(saved.documentNumber)});
       return json(res,200,{ok:true,record:saved},integrationCors(req));
     }
-    if(req.method==='POST'&&url.pathname==='/api/admin/login'){const body=await readBody(req);if(!safeEqual(body.username,ADMIN_USER)||!safeEqual(body.password,ADMIN_PASSWORD))return json(res,401,{ok:false,message:'Credenciales incorrectas.'});const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})}
+    if(req.method==='POST'&&url.pathname==='/api/admin/login'){
+      const body=await readBody(req);const username=clean(body.username,40).toLowerCase();let role='operator';let displayName=username;let valid=false;
+      if(safeEqual(username,String(ADMIN_USER).toLowerCase())&&safeEqual(body.password,ADMIN_PASSWORD)){valid=true;role='superadmin';displayName=ADMIN_USER}
+      else{const user=await db.findAdminUser(username);if(user&&await verifyPassword(body.password,user.passwordHash)){valid=true;displayName=user.displayName||user.username}}
+      if(!valid)return json(res,401,{ok:false,message:'Credenciales incorrectas.'});
+      const id=crypto.randomUUID();sessions.set(id,{expires:Date.now()+8*60*60*1000,username,displayName,role});return json(res,200,{ok:true,user:{username,displayName,role}},{'Set-Cookie':`admin_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`})
+    }
     if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const id=cookies(req).admin_session;sessions.delete(id);return json(res,200,{ok:true},{'Set-Cookie':'admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})}
     if(url.pathname.startsWith('/api/admin/')&&!adminSession(req))return json(res,401,{ok:false,message:'Sesión administrativa requerida.'});
+    if(req.method==='GET'&&url.pathname==='/api/admin/users'){
+      if(adminSession(req).role!=='superadmin')return json(res,403,{ok:false,message:'Solo el superadministrador puede gestionar usuarios.'});
+      return json(res,200,{ok:true,users:await db.listAdminUsers()});
+    }
+    if(req.method==='POST'&&url.pathname==='/api/admin/users'){
+      if(adminSession(req).role!=='superadmin')return json(res,403,{ok:false,message:'Solo el superadministrador puede gestionar usuarios.'});
+      const body=await readBody(req);const username=clean(body.username,40).toLowerCase();const displayName=clean(body.displayName,80);const password=String(body.password||'');
+      if(!/^[a-z0-9._-]{3,40}$/.test(username))return json(res,400,{ok:false,message:'El usuario debe tener entre 3 y 40 caracteres válidos.'});
+      if(password.length<8)return json(res,400,{ok:false,message:'La contraseña debe tener al menos 8 caracteres.'});
+      if(username===String(ADMIN_USER).toLowerCase()||await db.findAdminUser(username))return json(res,409,{ok:false,message:'Ese usuario ya existe.'});
+      const user=await db.createAdminUser({id:crypto.randomUUID(),username,displayName:displayName||username,passwordHash:await hashPassword(password),role:'operator'});
+      return json(res,201,{ok:true,user});
+    }
+    const userMatch=url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if(userMatch&&req.method==='DELETE'){
+      if(adminSession(req).role!=='superadmin')return json(res,403,{ok:false,message:'Solo el superadministrador puede gestionar usuarios.'});
+      const id=decodeURIComponent(userMatch[1]);let removed;try{removed=await db.deleteAdminUser(id)}catch{return json(res,404,{ok:false,message:'Usuario no encontrado.'})}for(const[sessionId,session]of sessions){if(session.username===removed.username)sessions.delete(sessionId)}return json(res,200,{ok:true});
+    }
     if(req.method==='GET'&&url.pathname==='/api/admin/records'){
       const records = (await db.listRecords()).map(attachEvals);
       return json(res,200,{ok:true,records});

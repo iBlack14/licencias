@@ -118,6 +118,10 @@
           <span class="material-icons">drive_eta</span>
           <span>Examen de conducción</span>
         </button>
+        <button class="nav-item" data-section="users" id="nav-users" hidden>
+          <span class="material-icons">manage_accounts</span>
+          <span>Usuarios</span>
+        </button>
       </nav>
       <div class="sidebar-footer">
         <div class="user-chip">
@@ -405,6 +409,21 @@
         </div>
       </section>
 
+      <!-- USUARIOS SECTION: SOLO SUPERADMIN -->
+      <section id="section-users" class="content-section">
+        <div class="exam-section-header">
+          <div class="exam-section-icon-wrap exam-icon-blue"><span class="material-icons">manage_accounts</span></div>
+          <div><h2>Usuarios</h2><p>Cuentas de operadores con acceso al registro del sistema</p></div>
+        </div>
+        <div class="exam-toolbar">
+          <div></div>
+          <button class="btn-primary" id="user-add-btn"><span class="material-icons">person_add</span>Crear usuario</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Creado</th><th class="col-actions">Acciones</th></tr></thead><tbody id="users-tbody"></tbody></table>
+        </div>
+      </section>
+
     </div>
   </div>
 
@@ -645,6 +664,22 @@
             <span class="material-icons">save</span> Guardar examen
           </button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREAR USUARIO -->
+  <div id="user-modal" class="modal-overlay" hidden>
+    <div class="modal-backdrop" id="user-backdrop"></div>
+    <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+      <div class="modal-header"><h3 id="user-modal-title">Crear usuario</h3><button class="modal-close" id="user-close" type="button" aria-label="Cerrar"><span class="material-icons">close</span></button></div>
+      <form id="user-form" novalidate>
+        <div class="modal-body">
+          <div class="form-group"><label for="u-display-name">Nombre del operador</label><input id="u-display-name" type="text" maxlength="80" required></div>
+          <div class="form-group"><label for="u-username">Usuario</label><input id="u-username" type="text" maxlength="40" pattern="[A-Za-z0-9._-]{3,40}" autocomplete="off" required></div>
+          <div class="form-group"><label for="u-password">Contraseña</label><input id="u-password" type="password" minlength="8" autocomplete="new-password" required></div>
+        </div>
+        <div class="modal-footer"><p id="user-error" class="form-error" hidden></p><button type="button" class="btn-secondary" id="user-cancel">Cancelar</button><button type="submit" class="btn-primary" id="user-save"><span class="material-icons">person_add</span>Crear usuario</button></div>
       </form>
     </div>
   </div>

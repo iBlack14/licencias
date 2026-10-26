@@ -40,6 +40,7 @@ const loginForm    = $('login-form');
 const loginError   = $('login-error');
 const togglePass   = $('toggle-pass');
 const loginPassInput = $('login-pass');
+let currentAdmin = null;
 
 togglePass.addEventListener('click', () => {
   const show = loginPassInput.type === 'password';
@@ -60,11 +61,14 @@ loginForm.addEventListener('submit', async e => {
   });
 
   if (ok) {
+    currentAdmin = data.user;
     loginScreen.style.animation = 'fadeOut .3s ease forwards';
     setTimeout(() => {
       loginScreen.hidden = true;
       dashboard.hidden = false;
-      $('sidebar-user').textContent = $('login-user').value.trim() || 'admin';
+      $('sidebar-user').textContent = currentAdmin?.displayName || currentAdmin?.username || 'admin';
+      document.querySelector('.user-role').textContent = currentAdmin?.role === 'superadmin' ? 'Superadministrador' : 'Operador MTC';
+      $('nav-users').hidden = currentAdmin?.role !== 'superadmin';
       loadRecords();
     }, 300);
   } else {
@@ -86,6 +90,8 @@ $('logout-btn').addEventListener('click', async () => {
   loginScreen.hidden = false;
   loginScreen.style.animation = '';
   loginForm.reset();
+  currentAdmin = null;
+  $('nav-users').hidden = true;
   loginError.hidden = true;
   $('login-user').focus();
   toast('Sesión cerrada correctamente', 'info');
@@ -111,6 +117,7 @@ const sectionTitles = {
   'cofipro-b': 'Reg. Curso COFIPRO Clase B RECATEGORIZACIÓN',
   'cofipro-b-ii': 'Reg. Curso COFIPRO Clase B IIC',
   'curso-taller': 'Reg. Curso Taller "Cambiemos de Actitud"',
+  'users': 'Gestión de Usuarios',
   'exam-conduccion': 'Examen de Conducción'
 };
 
@@ -128,6 +135,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (section === 'cofipro-b') renderCofipro('b');
     if (section === 'cofipro-b-ii') renderCofipro('b-ii');
     if (section === 'curso-taller') renderCofipro('taller');
+    if (section === 'users') loadUsers();
     if (section === 'exam-conduccion') renderExamConduccion();
     sidebar.classList.remove('open');
   });
@@ -400,6 +408,88 @@ $('delete-confirm').addEventListener('click', async () => {
     closeDeleteModal();
     toast(data.message || 'Error al eliminar.', 'error');
   }
+});
+
+/* ——————————————————————————————
+   USUARIOS: SOLO SUPERADMIN
+   —————————————————————————————— */
+const userModal = $('user-modal');
+const userForm = $('user-form');
+const userError = $('user-error');
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+}
+
+async function loadUsers() {
+  if (currentAdmin?.role !== 'superadmin') return;
+  const tbody = $('users-tbody');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="spinner-wrap"><div class="spinner"></div><span>Cargando usuarios…</span></div></td></tr>';
+  const { ok, data } = await apiFetch('/api/admin/users');
+  if (!ok) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No se pudieron cargar los usuarios.</p></div></td></tr>';
+    toast(data.message || 'Error cargando usuarios', 'error');
+    return;
+  }
+  const users = data.users || [];
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="material-icons">group_off</span><p>No hay operadores creados aún.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(user => `<tr>
+    <td class="doc-chip">${escapeHtml(user.username)}</td>
+    <td><strong>${escapeHtml(user.displayName)}</strong></td>
+    <td><span class="status-badge vigente"><span class="status-dot"></span>OPERADOR</span></td>
+    <td>${escapeHtml(new Date(user.createdAt).toLocaleDateString('es-PE'))}</td>
+    <td style="text-align:center"><button class="action-btn delete" data-id="${escapeHtml(user.id)}" data-name="${escapeHtml(user.username)}" title="Eliminar usuario"><span class="material-icons">delete</span></button></td>
+  </tr>`).join('');
+  tbody.querySelectorAll('.action-btn.delete').forEach(button => button.addEventListener('click', async () => {
+    if (!window.confirm(`¿Eliminar al usuario ${button.dataset.name}?`)) return;
+    const result = await apiFetch(`/api/admin/users/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' });
+    if (!result.ok) return toast(result.data.message || 'No se pudo eliminar el usuario', 'error');
+    toast('Usuario eliminado correctamente', 'success');
+    loadUsers();
+  }));
+}
+
+function openUserModal() {
+  userForm.reset();
+  userError.hidden = true;
+  resetModalPosition(userModal);
+  userModal.hidden = false;
+  $('u-display-name').focus();
+}
+
+function closeUserModal() {
+  userModal.hidden = true;
+  resetModalPosition(userModal);
+}
+
+$('user-add-btn').addEventListener('click', openUserModal);
+$('user-close').addEventListener('click', closeUserModal);
+$('user-cancel').addEventListener('click', closeUserModal);
+$('user-backdrop').addEventListener('click', closeUserModal);
+
+userForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  userError.hidden = true;
+  if (!userForm.checkValidity()) return userForm.reportValidity();
+  const button = $('user-save');
+  button.disabled = true;
+  const result = await apiFetch('/api/admin/users', { method: 'POST', body: {
+    displayName: $('u-display-name').value.trim(),
+    username: $('u-username').value.trim(),
+    password: $('u-password').value
+  }});
+  button.disabled = false;
+  if (!result.ok) {
+    userError.textContent = result.data.message || 'No se pudo crear el usuario.';
+    userError.hidden = false;
+    return;
+  }
+  closeUserModal();
+  toast('Usuario creado correctamente', 'success');
+  loadUsers();
 });
 
 /* ——————————————————————————————

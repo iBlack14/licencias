@@ -29,3 +29,14 @@ model DriverRecord {
   @@map("driver_records")
 }
 
+model AdminUser {
+  id           String   @id @db.VarChar(36)
+  username     String   @unique @db.VarChar(40)
+  displayName  String   @db.VarChar(80)
+  passwordHash String   @db.VarChar(200)
+  role         String   @default("operator") @db.VarChar(20)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("admin_users")
+}

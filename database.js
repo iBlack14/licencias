@@ -131,5 +131,26 @@ async function upsertRecord(record) {
   return result;
 }
 
-module.exports = { prisma, listRecords, findRecord, findByDocumentNumber, createRecord, updateRecord, deleteRecord, upsertRecord };
+async function listAdminUsers() {
+  return prisma.adminUser.findMany({
+    select: { id: true, username: true, displayName: true, role: true, createdAt: true },
+    orderBy: { createdAt: 'desc' }
+  });
+}
 
+async function findAdminUser(username) {
+  return prisma.adminUser.findUnique({ where: { username } });
+}
+
+async function createAdminUser(user) {
+  return prisma.adminUser.create({
+    data: user,
+    select: { id: true, username: true, displayName: true, role: true, createdAt: true }
+  });
+}
+
+async function deleteAdminUser(id) {
+  return prisma.adminUser.delete({ where: { id } });
+}
+
+module.exports = { prisma, listRecords, findRecord, findByDocumentNumber, createRecord, updateRecord, deleteRecord, upsertRecord, listAdminUsers, findAdminUser, createAdminUser, deleteAdminUser };
