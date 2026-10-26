@@ -177,7 +177,12 @@ const server=http.createServer(async(req,res)=>{
         cofiproBIICategoria: raw.cofiproBIICategoria || 'B II',
         cofiproBIICentro: raw.cofiproBIICentro || record.issuer,
         cofiproBIIFecha: raw.cofiproBIIFecha || record.issuedAt,
-        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt
+        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt,
+        cursoTallerTramite: raw.cursoTallerTramite || 'REVALIDACIÓN',
+        cursoTallerCategoria: raw.cursoTallerCategoria || record.licenseClass || 'A I',
+        cursoTallerCentro: raw.cursoTallerCentro || record.issuer,
+        cursoTallerFecha: raw.cursoTallerFecha || record.issuedAt,
+        cursoTallerVence: raw.cursoTallerVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,201,{ok:true,record:attachEvals(saved)});
@@ -219,7 +224,12 @@ const server=http.createServer(async(req,res)=>{
         cofiproBIICategoria: raw.cofiproBIICategoria || 'B II',
         cofiproBIICentro: raw.cofiproBIICentro || record.issuer,
         cofiproBIIFecha: raw.cofiproBIIFecha || record.issuedAt,
-        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt
+        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt,
+        cursoTallerTramite: raw.cursoTallerTramite || 'REVALIDACIÓN',
+        cursoTallerCategoria: raw.cursoTallerCategoria || record.licenseClass || 'A I',
+        cursoTallerCentro: raw.cursoTallerCentro || record.issuer,
+        cursoTallerFecha: raw.cursoTallerFecha || record.issuedAt,
+        cursoTallerVence: raw.cursoTallerVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,200,{ok:true,record:attachEvals(updated)});

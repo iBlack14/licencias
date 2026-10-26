@@ -107,9 +107,10 @@ const sectionTitles = {
   'records': 'Gestión de Licencias',
   'stats': 'Estadísticas',
   'exam-conocimiento': 'Examen de Conocimiento',
-  'cofipro-a': 'Registrar curso RECATEGORIZACIÓN COFIPRO A',
-  'cofipro-b': 'Registrar curso REVALIDACIÓN COFIPRO B',
-  'cofipro-b-ii': 'Registrar curso COFIPRO para B II',
+  'cofipro-a': 'Reg. Curso COFIPRO Clase A RECATEGORIZACIÓN',
+  'cofipro-b': 'Reg. Curso COFIPRO Clase B RECATEGORIZACIÓN',
+  'cofipro-b-ii': 'Reg. Curso COFIPRO Clase B IIC',
+  'curso-taller': 'Reg. Curso Taller "Cambiemos de Actitud"',
   'exam-conduccion': 'Examen de Conducción'
 };
 
@@ -126,6 +127,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (section === 'cofipro-a') renderCofipro('a');
     if (section === 'cofipro-b') renderCofipro('b');
     if (section === 'cofipro-b-ii') renderCofipro('b-ii');
+    if (section === 'curso-taller') renderCofipro('taller');
     if (section === 'exam-conduccion') renderExamConduccion();
     sidebar.classList.remove('open');
   });
@@ -164,6 +166,7 @@ async function loadRecords() {
   renderCofipro('a');
   renderCofipro('b');
   renderCofipro('b-ii');
+  renderCofipro('taller');
   renderExamConduccion();
 }
 
@@ -432,11 +435,12 @@ function renderStats() {
 let ecSearchTerm = '';
 let knowledgeEditingDoc = null;
 let knowledgeMode = 'conocimiento';
-const cofiproSearchTerms = { a: '', b: '', 'b-ii': '' };
+const cofiproSearchTerms = { a: '', b: '', 'b-ii': '', taller: '' };
 const cofiproConfigs = {
-  a: { prefix: 'cofiproA', label: 'Registrar curso RECATEGORIZACIÓN COFIPRO A', empty: 'RECATEGORIZACIÓN COFIPRO A', tramite: 'RECATEGORIZACIÓN' },
-  b: { prefix: 'cofiproB', label: 'Registrar curso REVALIDACIÓN COFIPRO B', empty: 'REVALIDACIÓN COFIPRO B', tramite: 'REVALIDACIÓN' },
-  'b-ii': { prefix: 'cofiproBII', label: 'Registrar curso COFIPRO para B II', empty: 'COFIPRO para B II', tramite: 'REVALIDACIÓN' }
+  a: { prefix: 'cofiproA', section: 'cofipro-a', label: 'Reg. Curso COFIPRO Clase A RECATEGORIZACIÓN', empty: 'COFIPRO Clase A RECATEGORIZACIÓN', tramite: 'RECATEGORIZACIÓN' },
+  b: { prefix: 'cofiproB', section: 'cofipro-b', label: 'Reg. Curso COFIPRO Clase B RECATEGORIZACIÓN', empty: 'COFIPRO Clase B RECATEGORIZACIÓN', tramite: 'RECATEGORIZACIÓN' },
+  'b-ii': { prefix: 'cofiproBII', section: 'cofipro-b-ii', label: 'Reg. Curso COFIPRO Clase B IIC', empty: 'COFIPRO Clase B IIC', tramite: 'REVALIDACIÓN' },
+  taller: { prefix: 'cursoTaller', section: 'curso-taller', label: 'Reg. Curso Taller "Cambiemos de Actitud"', empty: 'Taller "Cambiemos de Actitud"', tramite: 'REVALIDACIÓN' }
 };
 
 function resultBadge(status) {
@@ -514,9 +518,9 @@ $('ec-add-btn').addEventListener('click', () => {
 });
 
 function renderCofipro(type) {
-  const tbody = $(`cofipro-${type}-tbody`);
-  const q = cofiproSearchTerms[type].toLowerCase();
   const config = cofiproConfigs[type];
+  const tbody = $(`${config.section}-tbody`);
+  const q = cofiproSearchTerms[type].toLowerCase();
   const prefix = config.prefix;
   const filtered = q ? allRecords.filter(r =>
     (r.documentNumber || '').toLowerCase().includes(q) ||
@@ -541,15 +545,16 @@ function renderCofipro(type) {
       <td style="text-align:center"><button class="action-btn edit" title="Editar revalidación" data-doc="${r.documentNumber}"><span class="material-icons">edit</span></button></td>
     </tr>`;
   }).join('');
-  tbody.querySelectorAll('.action-btn.edit').forEach(btn => btn.addEventListener('click', () => openKnowledgeModal(btn.dataset.doc, `cofipro-${type}`)));
+  tbody.querySelectorAll('.action-btn.edit').forEach(btn => btn.addEventListener('click', () => openKnowledgeModal(btn.dataset.doc, config.section)));
 }
 
-['a', 'b', 'b-ii'].forEach(type => {
-  $(`cofipro-${type}-search`).addEventListener('input', e => {
+['a', 'b', 'b-ii', 'taller'].forEach(type => {
+  const config = cofiproConfigs[type];
+  $(`${config.section}-search`).addEventListener('input', e => {
     cofiproSearchTerms[type] = e.target.value.trim();
     renderCofipro(type);
   });
-  $(`cofipro-${type}-add-btn`).addEventListener('click', () => openKnowledgeModal(null, `cofipro-${type}`));
+  $(`${config.section}-add-btn`).addEventListener('click', () => openKnowledgeModal(null, config.section));
 });
 
 const knowledgeModal = $('knowledge-modal');
@@ -560,7 +565,7 @@ function openKnowledgeModal(docNumber = null, mode = 'conocimiento') {
   const rec = docNumber ? allRecords.find(r => r.documentNumber === docNumber) : null;
   const ev = rec?.evaluations || {};
   knowledgeMode = mode;
-  const cofiproKey = mode.startsWith('cofipro-') ? mode.slice(8) : '';
+  const cofiproKey = mode === 'curso-taller' ? 'taller' : mode.startsWith('cofipro-') ? mode.slice(8) : '';
   const config = cofiproConfigs[cofiproKey];
   const prefix = config?.prefix || 'con';
   const label = config?.label || 'Examen de Conocimiento';
@@ -606,7 +611,7 @@ knowledgeForm.addEventListener('submit', async e => {
   const ev = existing?.evaluations || {};
   const documentNumber = $('k-docNum').value.trim().toUpperCase();
   const category = $('k-category').value.trim().toUpperCase();
-  const cofiproKey = knowledgeMode.startsWith('cofipro-') ? knowledgeMode.slice(8) : '';
+  const cofiproKey = knowledgeMode === 'curso-taller' ? 'taller' : knowledgeMode.startsWith('cofipro-') ? knowledgeMode.slice(8) : '';
   const config = cofiproConfigs[cofiproKey];
   const prefix = config?.prefix || 'con';
   const evaluationFields = config ? {
