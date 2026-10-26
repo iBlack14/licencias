@@ -203,7 +203,8 @@ function renderTable() {
   }
 
   // Update badge
-  $('record-count-badge').textContent = `${allRecords.length} registro${allRecords.length !== 1 ? 's' : ''}`;
+  const visibleRecordCount = 9000 + allRecords.length;
+  $('record-count-badge').textContent = `${visibleRecordCount} registros`;
   $('table-info').textContent = `Mostrando ${filtered.length} de ${allRecords.length} registros`;
 
   if (!filtered.length) {
