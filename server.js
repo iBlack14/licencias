@@ -172,7 +172,12 @@ const server=http.createServer(async(req,res)=>{
         cofiproBCategoria: raw.cofiproBCategoria || record.licenseClass || 'A I',
         cofiproBCentro: raw.cofiproBCentro || record.issuer,
         cofiproBFecha: raw.cofiproBFecha || record.issuedAt,
-        cofiproBVence: raw.cofiproBVence || record.expiresAt
+        cofiproBVence: raw.cofiproBVence || record.expiresAt,
+        cofiproBIITramite: raw.cofiproBIITramite || 'REVALIDACIÓN',
+        cofiproBIICategoria: raw.cofiproBIICategoria || 'B II',
+        cofiproBIICentro: raw.cofiproBIICentro || record.issuer,
+        cofiproBIIFecha: raw.cofiproBIIFecha || record.issuedAt,
+        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,201,{ok:true,record:attachEvals(saved)});
@@ -209,7 +214,12 @@ const server=http.createServer(async(req,res)=>{
         cofiproBCategoria: raw.cofiproBCategoria || record.licenseClass || 'A I',
         cofiproBCentro: raw.cofiproBCentro || record.issuer,
         cofiproBFecha: raw.cofiproBFecha || record.issuedAt,
-        cofiproBVence: raw.cofiproBVence || record.expiresAt
+        cofiproBVence: raw.cofiproBVence || record.expiresAt,
+        cofiproBIITramite: raw.cofiproBIITramite || 'REVALIDACIÓN',
+        cofiproBIICategoria: raw.cofiproBIICategoria || 'B II',
+        cofiproBIICentro: raw.cofiproBIICentro || record.issuer,
+        cofiproBIIFecha: raw.cofiproBIIFecha || record.issuedAt,
+        cofiproBIIVence: raw.cofiproBIIVence || record.expiresAt
       };
       saveEvalsStore(store);
       return json(res,200,{ok:true,record:attachEvals(updated)});

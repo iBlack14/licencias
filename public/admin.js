@@ -107,8 +107,9 @@ const sectionTitles = {
   'records': 'Gestión de Licencias',
   'stats': 'Estadísticas',
   'exam-conocimiento': 'Examen de Conocimiento',
-  'cofipro-a': 'REVALIDACIÓN COFIPRO A',
-  'cofipro-b': 'REVALIDACIÓN COFIPRO B',
+  'cofipro-a': 'Registrar curso RECATEGORIZACIÓN COFIPRO A',
+  'cofipro-b': 'Registrar curso REVALIDACIÓN COFIPRO B',
+  'cofipro-b-ii': 'Registrar curso COFIPRO para B II',
   'exam-conduccion': 'Examen de Conducción'
 };
 
@@ -124,6 +125,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     if (section === 'exam-conocimiento') renderExamConocimiento();
     if (section === 'cofipro-a') renderCofipro('a');
     if (section === 'cofipro-b') renderCofipro('b');
+    if (section === 'cofipro-b-ii') renderCofipro('b-ii');
     if (section === 'exam-conduccion') renderExamConduccion();
     sidebar.classList.remove('open');
   });
@@ -161,6 +163,7 @@ async function loadRecords() {
   renderExamConocimiento();
   renderCofipro('a');
   renderCofipro('b');
+  renderCofipro('b-ii');
   renderExamConduccion();
 }
 
@@ -429,7 +432,12 @@ function renderStats() {
 let ecSearchTerm = '';
 let knowledgeEditingDoc = null;
 let knowledgeMode = 'conocimiento';
-const cofiproSearchTerms = { a: '', b: '' };
+const cofiproSearchTerms = { a: '', b: '', 'b-ii': '' };
+const cofiproConfigs = {
+  a: { prefix: 'cofiproA', label: 'Registrar curso RECATEGORIZACIÓN COFIPRO A', empty: 'RECATEGORIZACIÓN COFIPRO A', tramite: 'RECATEGORIZACIÓN' },
+  b: { prefix: 'cofiproB', label: 'Registrar curso REVALIDACIÓN COFIPRO B', empty: 'REVALIDACIÓN COFIPRO B', tramite: 'REVALIDACIÓN' },
+  'b-ii': { prefix: 'cofiproBII', label: 'Registrar curso COFIPRO para B II', empty: 'COFIPRO para B II', tramite: 'REVALIDACIÓN' }
+};
 
 function resultBadge(status) {
   // Vigente / Aprobado → verde, Suspendida → naranja, Revocada/Vencida → rojo
@@ -508,7 +516,8 @@ $('ec-add-btn').addEventListener('click', () => {
 function renderCofipro(type) {
   const tbody = $(`cofipro-${type}-tbody`);
   const q = cofiproSearchTerms[type].toLowerCase();
-  const prefix = type === 'a' ? 'cofiproA' : 'cofiproB';
+  const config = cofiproConfigs[type];
+  const prefix = config.prefix;
   const filtered = q ? allRecords.filter(r =>
     (r.documentNumber || '').toLowerCase().includes(q) ||
     (r.lastNames || '').toLowerCase().includes(q) ||
@@ -516,7 +525,7 @@ function renderCofipro(type) {
     (r.evaluations?.[`${prefix}Centro`] || '').toLowerCase().includes(q)
   ) : allRecords;
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">menu_book</span><p>${q ? 'No hay coincidencias.' : `No hay registros de REVALIDACIÓN COFIPRO ${type.toUpperCase()} aún.`}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">menu_book</span><p>${q ? 'No hay coincidencias.' : `No hay registros de ${config.empty} aún.`}</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(r => {
@@ -527,7 +536,7 @@ function renderCofipro(type) {
       <td style="font-size:.85rem">${ev[`${prefix}Centro`] || r.issuer || 'TOURING Y AUTOMOVIL CLUB DEL PERU'}</td>
       <td style="font-size:.83rem;text-align:center">${ev[`${prefix}Fecha`] || r.issuedAt || '—'}</td>
       <td style="font-size:.83rem;text-align:center">${ev[`${prefix}Vence`] || r.expiresAt || '—'}</td>
-      <td style="text-align:center"><span class="doc-chip">${ev[`${prefix}Tramite`] || 'REVALIDACIÓN'}</span></td>
+      <td style="text-align:center"><span class="doc-chip">${ev[`${prefix}Tramite`] || config.tramite}</span></td>
       <td style="text-align:center"><strong>${ev[`${prefix}Categoria`] || r.licenseClass || 'A I'}</strong></td>
       <td style="text-align:center"><button class="action-btn edit" title="Editar revalidación" data-doc="${r.documentNumber}"><span class="material-icons">edit</span></button></td>
     </tr>`;
@@ -535,7 +544,7 @@ function renderCofipro(type) {
   tbody.querySelectorAll('.action-btn.edit').forEach(btn => btn.addEventListener('click', () => openKnowledgeModal(btn.dataset.doc, `cofipro-${type}`)));
 }
 
-['a', 'b'].forEach(type => {
+['a', 'b', 'b-ii'].forEach(type => {
   $(`cofipro-${type}-search`).addEventListener('input', e => {
     cofiproSearchTerms[type] = e.target.value.trim();
     renderCofipro(type);
@@ -551,9 +560,10 @@ function openKnowledgeModal(docNumber = null, mode = 'conocimiento') {
   const rec = docNumber ? allRecords.find(r => r.documentNumber === docNumber) : null;
   const ev = rec?.evaluations || {};
   knowledgeMode = mode;
-  const cofiproType = mode === 'cofipro-a' ? 'A' : mode === 'cofipro-b' ? 'B' : '';
-  const prefix = cofiproType ? `cofipro${cofiproType}` : 'con';
-  const label = cofiproType ? `REVALIDACIÓN COFIPRO ${cofiproType}` : 'Examen de Conocimiento';
+  const cofiproKey = mode.startsWith('cofipro-') ? mode.slice(8) : '';
+  const config = cofiproConfigs[cofiproKey];
+  const prefix = config?.prefix || 'con';
+  const label = config?.label || 'Examen de Conocimiento';
   knowledgeEditingDoc = rec?.documentNumber || null;
   knowledgeForm.reset();
   knowledgeError.hidden = true;
@@ -563,8 +573,8 @@ function openKnowledgeModal(docNumber = null, mode = 'conocimiento') {
   $('k-docNum').value = rec?.documentNumber || '';
   $('k-firstNames').value = rec?.firstNames || '';
   $('k-lastNames').value = rec?.lastNames || '';
-  $('k-tramite').value = ev[cofiproType ? `${prefix}Tramite` : 'tramite'] || 'REVALIDACIÓN';
-  $('k-category').value = ev[cofiproType ? `${prefix}Categoria` : 'evalCategoria'] || rec?.licenseClass || 'A I';
+  $('k-tramite').value = ev[config ? `${prefix}Tramite` : 'tramite'] || config?.tramite || 'REVALIDACIÓN';
+  $('k-category').value = ev[config ? `${prefix}Categoria` : 'evalCategoria'] || rec?.licenseClass || (cofiproKey === 'b-ii' ? 'B II' : 'A I');
   $('k-center').value = ev[`${prefix}Centro`] || 'TOURING Y AUTOMOVIL CLUB DEL PERU';
   $('k-date').value = ev[`${prefix}Fecha`] || '';
   $('k-expiry').value = ev[`${prefix}Vence`] || '';
@@ -596,9 +606,10 @@ knowledgeForm.addEventListener('submit', async e => {
   const ev = existing?.evaluations || {};
   const documentNumber = $('k-docNum').value.trim().toUpperCase();
   const category = $('k-category').value.trim().toUpperCase();
-  const cofiproType = knowledgeMode === 'cofipro-a' ? 'A' : knowledgeMode === 'cofipro-b' ? 'B' : '';
-  const prefix = cofiproType ? `cofipro${cofiproType}` : 'con';
-  const evaluationFields = cofiproType ? {
+  const cofiproKey = knowledgeMode.startsWith('cofipro-') ? knowledgeMode.slice(8) : '';
+  const config = cofiproConfigs[cofiproKey];
+  const prefix = config?.prefix || 'con';
+  const evaluationFields = config ? {
     [`${prefix}Tramite`]: $('k-tramite').value,
     [`${prefix}Categoria`]: category,
     [`${prefix}Centro`]: $('k-center').value.trim().toUpperCase(),
@@ -640,7 +651,7 @@ knowledgeForm.addEventListener('submit', async e => {
   const wasEditing = Boolean(knowledgeEditingDoc);
   closeKnowledgeModal();
   await loadRecords();
-  const savedLabel = cofiproType ? `REVALIDACIÓN COFIPRO ${cofiproType}` : 'Examen de conocimiento';
+  const savedLabel = config?.label || 'Examen de conocimiento';
   toast(`${savedLabel} ${wasEditing ? 'actualizado' : 'registrado'}`, 'success');
 });
 
