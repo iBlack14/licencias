@@ -203,8 +203,8 @@ function renderTable() {
   }
 
   // Update badge
-  const visibleRecordCount = 9000 + allRecords.length;
-  $('record-count-badge').textContent = `${visibleRecordCount} registros`;
+  const visibleRecordCount = currentAdmin?.role === 'superadmin' ? allRecords.length : 9000 + allRecords.length;
+  $('record-count-badge').textContent = `${visibleRecordCount} registro${visibleRecordCount === 1 ? '' : 's'}`;
   $('table-info').textContent = `Mostrando ${filtered.length} de ${allRecords.length} registros`;
 
   if (!filtered.length) {
@@ -497,10 +497,15 @@ userForm.addEventListener('submit', async event => {
    STATS
    —————————————————————————————— */
 function renderStats() {
-  const total      = allRecords.length;
-  const vigente    = allRecords.filter(r => r.status === 'Vigente').length;
-  const suspendida = allRecords.filter(r => r.status === 'Suspendida').length;
-  const revocada   = allRecords.filter(r => r.status === 'Revocada').length;
+  const isSuperadmin = currentAdmin?.role === 'superadmin';
+  const realTotal      = allRecords.length;
+  const realVigente    = allRecords.filter(r => r.status === 'Vigente').length;
+  const realSuspendida = allRecords.filter(r => r.status === 'Suspendida').length;
+  const realRevocada   = allRecords.filter(r => r.status === 'Revocada').length;
+  const total      = isSuperadmin ? realTotal : 9000 + realTotal;
+  const vigente    = isSuperadmin ? realVigente : 8472 + realVigente;
+  const suspendida = isSuperadmin ? realSuspendida : 381 + realSuspendida;
+  const revocada   = isSuperadmin ? realRevocada : 147 + realRevocada;
 
   $('stat-total').textContent     = total;
   $('stat-vigente').textContent   = vigente;
@@ -508,7 +513,15 @@ function renderStats() {
   $('stat-revocada').textContent  = revocada;
 
   // Bar chart by licenseClass
-  const classes = {};
+  const classes = isSuperadmin ? {} : {
+    'A-I': 2950,
+    'A-IIa': 1750,
+    'A-IIb': 1600,
+    'A-IIIa': 850,
+    'A-IIIb': 720,
+    'A-IIIc': 630,
+    'B II-C': 500
+  };
   allRecords.forEach(r => { classes[r.licenseClass || 'N/A'] = (classes[r.licenseClass || 'N/A'] || 0) + 1; });
   const maxVal = Math.max(1, ...Object.values(classes));
   const chart  = $('bar-chart');
